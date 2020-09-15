@@ -4,6 +4,7 @@ library(shiny)
 library(shinydashboard)
 library(leaflet)
 library(rgdal)
+library(shinythemes)
 
 ## Increase upload file size
 maxsize_MB <- 30 # megabytes
@@ -22,59 +23,79 @@ options(shiny.maxRequestSize = maxsize_MB*1024^2)
 source("src/01_draw leaflet.R")
 
 ## UI ----
-ui <- navbarPage(title = "No-go Zones",
 
-             tabPanel(title = "Interactive map",
-                      leafletOutput("nogomap", width="100%", height=650),
+header <- dashboardHeader(
+  title = "no go map"
+)
 
-                      absolutePanel(id = "main_control", class = "panel panel-default",
-                                    fixed = TRUE, draggable = TRUE,
-                                    top = 200, right = "auto", left = 20, bottom = "auto",
-                                    width = 330, height = "auto",
+sidebar <- dashboardSidebar(
+  sidebarMenu(
+    menuItem("Interactive map", tabName = "int_map"),
+    menuItem("Data output", tabName = "data_output"),
+    menuItem("Help", tabName = "help")
+  )
+)
 
-                                    # h2("User inputs"),
-                                    tags$hr(),
-                                    "Shapefile uploads",
-                                    fileInput("user_shape", "Choose file (csv, kml or shp)",
-                                              multiple = TRUE,
-                                              accept = c(".csv",".kml",".zip",
-                                                         ".shx", ".shp", ".sbn", ".sbx",
-                                                         ".dbf",".prj")),
-                                    tags$hr(),
-                                    "Property searches",
-                                    textInput("sgcode", "SG CODE", ""),
-                                    tags$hr(),
-                                    actionButton("search_prop", "Search property"),
-                                    # actionButton("map_reset", "Clear map"),
-                                    numericInput("lat", "Latitude", value = 0),
-                                    numericInput("long", "Longitude", value = 0),
-                                    actionButton("add_point", "Add point")
+body <- dashboardBody(
+  tabItems(
+    tabItem(tabName = "int_map",
+            fluidRow(
+                  column(
+                    width = 3,
+                    box(title = "inputs", width = NULL, solidHeader = TRUE,
+                        status = "primary",
+                        fileInput("user_shape", "Upload development footprint (kml or shp)",
+                                  multiple = TRUE,
+                                  accept = c(".csv",".kml",".zip",
+                                             ".shx", ".shp", ".sbn", ".sbx",
+                                             ".dbf",".prj")),
+                        tags$hr(),
+                        textInput("sgcode", "Enter 21 digit SG code", ""),
+                        actionButton("search_prop", "Search property"),
+                        br(),
+                        tags$hr(),
+                        tags$b("Enter latitude/longitude to add point"),
+                        numericInput("lat", "Latitude", value = 0),
+                        numericInput("long", "Longitude", value = 0),
+                        actionButton("add_point", "Add point")
+                        )
+                  ),
+                  column(
+                    width = 9,
+                    box(title = NULL, width = NULL, solidHeader = TRUE,
+                        leafletOutput("nogomap", width = "100%", height = 620),
+                        absolutePanel(id = "clear_control", class = "panel panel-default",
+                                      fixed = TRUE, draggable = FALSE,
+                                      top = 350, right = 30, left = "auto", bottom = "auto",
+                                      width = "auto", height = "auto",
+                                      actionButton("map_reset", "Clear map")
+                                      )
+                        )
+                      )
+                  )
+          ),
 
-                                    ),
+    tabItem(tabName = "data_output",
+            h2("Some outputs"),
+            tableOutput("sens_feat_table"),
+            tags$hr(),
+            tableOutput("property_table")
+            ),
 
-                      absolutePanel(id = "clear_control", class = "panel panel-default",
-                                    fixed = TRUE, draggable = FALSE,
-                                    top = 350, right = 30, left = "auto", bottom = "auto",
-                                    width = "auto", height = "auto",
+    tabItem(tabName = "help",
+            h2("Help to come")
+    )
+  )
+)
 
-                                    actionButton("map_reset", "Clear map"),
 
-                                    )
-                      ),
+ui <- dashboardPage(
+  header,
+  sidebar,
+  body
+)
 
-             tabPanel(title = "Outputs",
-                      "testingtesting",
-                      tableOutput("sens_feat_table"),
-                      tags$hr(),
-                      tableOutput("property_table")
-                      ),
-
-             tabPanel(title = "Help/instructions",
-                      "Useful text"
-             )
-
-             )
-
+## Server ----
 server <- function(input, output, session) {
 
   ## Add user point ----
