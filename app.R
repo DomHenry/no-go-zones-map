@@ -15,8 +15,13 @@ options(shiny.maxRequestSize = maxsize_MB*1024^2)
 # Good guide
 # https://www.paulamoraga.com/book-geospatial/sec-shinyexample.html
 
+## Reactivity
+# https://stackoverflow.com/questions/53016404/advantages-of-reactive-vs-observe-vs-observeevent
+
+
 source("src/01_draw leaflet.R")
 
+## UI ----
 ui <- navbarPage(title = "No-go Zones",
 
              tabPanel(title = "Interactive map",
@@ -39,6 +44,7 @@ ui <- navbarPage(title = "No-go Zones",
                                     textInput("sgcode", "SG CODE", ""),
                                     br(),
                                     tags$hr(),
+                                    actionButton("search_prop", "Search property"),
                                     radioButtons("file_type", "Point or polygon",
                                                  choices = c(Point = "point",
                                                              Polygon = "polygon"),
@@ -61,10 +67,18 @@ ui <- navbarPage(title = "No-go Zones",
 
 server <- function(input, output) {
 
+  ## Plot base map ----
   output$nogomap <- renderLeaflet({
     nogo_basemap
   })
 
+  ## Reset map to original state ----
+
+  eventReactive(input$map_reset, {
+
+  })
+
+  ##  Plot user input polygon ----
   observeEvent(input$user_shape,{
 
     cen <- sfc_as_cols(st_centroid(user_polygon())) %>%
@@ -94,7 +108,7 @@ server <- function(input, output) {
         options = layersControlOptions(collapsed=FALSE)
       ) %>%
       showGroup("Farm portions") %>%
-      clearControls() %>% # Remove legend and then redraw below
+      clearControls() %>%
       addLegend("bottomright",
                 colors = c("red","lime","blue","yellow","purple"),
                 labels = c("No-Go","PA","Farm portion","ERF","User shapefile"),
@@ -104,19 +118,19 @@ server <- function(input, output) {
 
   })
 
+  ## Extract property from SG code ----
   prop_extract <- reactive({
 
     req(input$sgcode)
-
     ref_farm <- which(farms$PRCL_KEY %in% input$sgcode)
     ref <- ref_farm
     prop_extract <- farms[ref,]
     prop_extract
 
-
   })
 
-  observeEvent(input$sgcode,{
+  ## Plot property from SG code ----
+  observeEvent(input$search_prop,{
 
     cen <- sfc_as_cols(st_centroid(prop_extract())) %>%
       st_drop_geometry()
@@ -145,7 +159,7 @@ server <- function(input, output) {
         options = layersControlOptions(collapsed=FALSE)
       ) %>%
       hideGroup("Farm portions") %>%
-      clearControls() %>% # Remove legend and then redraw below
+      clearControls() %>%
       addLegend("bottomright",
                 colors = c("red","lime","blue","yellow","purple"),
                 labels = c("No-Go","PA","Farm portion","ERF","User shapefile"),
@@ -155,34 +169,19 @@ server <- function(input, output) {
 
   })
 
+  ## Upload and extract polygon ----
   user_polygon <- reactive({
 
     req(input$user_shape)
-
-    # shpdf is a data.frame with the name, size, type and datapath of upload files
     shpdf <- input$user_shape
-
-    # The files are uploaded with names
-    # 0.dbf, 1.prj, 2.shp, 3.xml, 4.shx (path/names are in column datapath)
-    # We need to rename the files with the actual names (data from column name):
-
-    # Name of the temporary directory where files are uploaded
     tempdirname <- dirname(shpdf$datapath[1])
 
-    # Rename files
     for (i in 1:nrow(shpdf)) {
       file.rename(
         shpdf$datapath[i],
         paste0(tempdirname, "/", shpdf$name[i])
       )
     }
-
-    # Now we read the shapefile with readOGR() of rgdal package
-    # passing the name of the file with .shp extension.
-
-    # We use the function grep() to search the pattern "*.shp$"
-    # within each element of the character vector shpdf$name.
-
     poly <- st_read(paste(tempdirname,
                           shpdf$name[grep(pattern = "*.shp$", shpdf$name)],
                           sep = "/"
@@ -190,6 +189,7 @@ server <- function(input, output) {
     poly
   })
 
+  ## Create sensitivity data table ----
   output$sens_feat_table <- renderTable(
 
     sens_df(),
@@ -197,6 +197,7 @@ server <- function(input, output) {
 
   )
 
+  ## Intersect polygon and high sensitivity layer ----
   sens_df <- reactive({
 
     req(input$user_shape)
