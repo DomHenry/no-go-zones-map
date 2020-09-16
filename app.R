@@ -5,6 +5,7 @@ library(shinydashboard)
 library(leaflet)
 library(rgdal)
 library(shinythemes)
+library(DT)
 
 ## Increase upload file size
 maxsize_MB <- 30 # megabytes
@@ -25,7 +26,7 @@ source("src/01_draw leaflet.R")
 ## UI ----
 
 header <- dashboardHeader(
-  title = "no go map"
+  title = "No-go Zones Map"
 )
 
 sidebar <- dashboardSidebar(
@@ -49,6 +50,7 @@ body <- dashboardBody(
                                   accept = c(".csv",".kml",".zip",
                                              ".shx", ".shp", ".sbn", ".sbx",
                                              ".dbf",".prj")),
+                        actionButton("plot_footprint", "Plot footprint"),
                         tags$hr(),
                         textInput("sgcode", "Enter 21 digit SG code", ""),
                         actionButton("search_prop", "Search property"),
@@ -76,10 +78,17 @@ body <- dashboardBody(
           ),
 
     tabItem(tabName = "data_output",
-            h2("Some outputs"),
-            tableOutput("sens_feat_table"),
+            h3("Some outputs"),
+            tags$b("USER"),
+            dataTableOutput("sens_feat_table_user"),
             tags$hr(),
-            tableOutput("property_table")
+            tags$b("SG"),
+            dataTableOutput("sens_feat_table_sg"),
+            tags$hr(),
+            tags$b("USER PROPERTY"),
+            dataTableOutput("property_table_user"),
+            tags$b("POINT PROPERTY"),
+            dataTableOutput("property_table_point")
             ),
 
     tabItem(tabName = "help",
@@ -97,25 +106,6 @@ ui <- dashboardPage(
 
 ## Server ----
 server <- function(input, output, session) {
-
-  ## Add user point ----
-  user_point <- reactive({
-    st_sfc(st_point(c(input$long,input$lat)),
-           crs = latlongCRS)
-  })
-
-  observeEvent(input$add_point,{
-    leafletProxy("nogomap") %>%
-      addMarkers(
-        data = user_point(),
-        popup = "User point",
-        group = "User point"
-      ) %>%
-      setView(lng = user_point()[[1]][1],
-              lat = user_point()[[1]][2],
-              zoom = 8)
-
-  })
 
   ## Plot base map ----
   output$nogomap <- renderLeaflet({
@@ -145,10 +135,38 @@ server <- function(input, output, session) {
       ) %>%
       hideGroup("Farm portions")
 
-    })
+  })
+
+  ## Reset datatables when map is cleared ----
+
+  ## This removes the table completely (not very useful beacause it's not dynamic)
+  # observeEvent(input$map_reset,{
+  #   removeUI(selector = "#property_table") # Need the '#' before the name
+  # })
+
+  ## Upload and extract user polygon ----
+  user_polygon <- reactive({
+
+    req(input$user_shape)
+
+    shpdf <- input$user_shape
+    tempdirname <- dirname(shpdf$datapath[1])
+
+    for (i in 1:nrow(shpdf)) {
+      file.rename(
+        shpdf$datapath[i],
+        paste0(tempdirname, "/", shpdf$name[i])
+      )
+    }
+    poly <- st_read(paste(tempdirname,
+                          shpdf$name[grep(pattern = "*.shp$", shpdf$name)],
+                          sep = "/"
+    ))
+    poly
+  })
 
   ##  Plot user input polygon ----
-  observeEvent(input$user_shape,{
+  observeEvent(input$plot_footprint,{
 
     cen <- sfc_as_cols(st_centroid(user_polygon())) %>%
       st_drop_geometry()
@@ -187,19 +205,57 @@ server <- function(input, output, session) {
 
   })
 
+
+  ## Add user point ----
+  "20.5"
+  "-33.7"
+   user_point <- reactive({
+    st_sfc(st_point(c(input$long,input$lat)),
+           crs = latlongCRS)
+  })
+
+  observeEvent(input$add_point,{
+    leafletProxy("nogomap") %>%
+      addMarkers(
+        data = user_point(),
+        popup = "User point",
+        group = "User point"
+      ) %>%
+      setView(lng = user_point()[[1]][1],
+              lat = user_point()[[1]][2],
+              zoom = 8)
+
+  })
+
   ## Extract property from SG code ----
   prop_extract <- reactive({
 
     req(input$sgcode)
+
+    "K436N0FS000000016416000001" # FARM
+    "K282N0GV042100011439000001" #ERF
+
     ref_farm <- which(farms$PRCL_KEY %in% input$sgcode)
-    ref <- ref_farm
-    prop_extract <- farms[ref,]
-    prop_extract
+    ref_erf <- which(erf_all$PRCL_KEY %in% input$sgcode)
+
+    if (all(c(length(ref_farm) == 0,length(ref_erf) == 0))) {
+      prop_extract <- NULL
+    } else if (length(ref_farm) >= 1){
+      ref <- ref_farm
+      prop_extract <- farms[ref,]
+    } else if (length(ref_erf) >= 1){
+      ref <- ref_erf
+      prop_extract <- erf_all[ref,]
+    }
+
+  return(prop_extract)
 
   })
 
   ## Plot property from SG code ----
   observeEvent(input$search_prop,{
+
+    req(prop_extract()) # Won't plot if prop_extract() is NULL
 
     cen <- sfc_as_cols(st_centroid(prop_extract())) %>%
       st_drop_geometry()
@@ -238,34 +294,8 @@ server <- function(input, output, session) {
 
   })
 
-  ## Upload and extract polygon ----
-  user_polygon <- reactive({
-
-    req(input$user_shape)
-    shpdf <- input$user_shape
-    tempdirname <- dirname(shpdf$datapath[1])
-
-    for (i in 1:nrow(shpdf)) {
-      file.rename(
-        shpdf$datapath[i],
-        paste0(tempdirname, "/", shpdf$name[i])
-      )
-    }
-    poly <- st_read(paste(tempdirname,
-                          shpdf$name[grep(pattern = "*.shp$", shpdf$name)],
-                          sep = "/"
-    ))
-    poly
-  })
-
-  ## Create sensitivity data table ----
-  output$sens_feat_table <- renderTable(
-    sens_df(),
-    Caption = "Test output"
-  )
-
-  ## Intersect polygon and high sensitivity layer ----
-  sens_df <- reactive({
+  ## Intersect user polygon and high sensitivity layer ----
+  sens_df_user <- reactive({
 
     req(input$user_shape)
 
@@ -281,17 +311,25 @@ server <- function(input, output, session) {
 
   })
 
-  ## Create property data table ----
-  output$property_table <- renderTable(
+  ## Intersect SG code property and high sensitivity layer ----
+  sens_df_sg <- reactive({
 
-    prop_df(),
-    Caption = "Test property output"
+    req(prop_extract())
 
-  )
+    nogo_user_int <- st_intersection(prop_extract(), high_sens_all)
+
+    df <- nogo_user_int %>%
+      st_drop_geometry() %>%
+      group_by(SENSFEA) %>%
+      tally() %>%
+      rename(Species = SENSFEA, NoGo_count = n)
+
+    df
+
+  })
 
   ## Intersect polygon and farm layer ----
-
-  prop_df <- reactive({
+  prop_df_user <- reactive({
 
     req(input$user_shape)
     farm_int <- st_intersection(user_polygon(),farms)
@@ -312,6 +350,51 @@ server <- function(input, output, session) {
                   values_from = value)
 
   })
+
+  ## Intersect point and farm layer ----
+
+  # NEED TO MAKE THIS SEARCH FOR ERFs TOO!
+  prop_df_point <- reactive({
+
+    req(user_point())
+
+    farm_int <- st_intersection(farms, user_point())
+
+    farm_df <- farm_int %>%
+      st_drop_geometry() %>%
+      as_tibble() %>%
+      select(-GID) %>%
+      select(PRCL_KEY, PRCL_TYPE, ID, PROVINCE, MAJ_REGION, MAJ_CODE, PARCEL_NO, PORTION) %>%
+      mutate_all(as.character)
+
+    farm_df %>%
+      mutate(prop = str_c("property_", 1:nrow(.))) %>%
+      pivot_longer(cols =-prop,
+                   names_to = "Farm_field",
+                   values_to = "value") %>%
+      pivot_wider(names_from = prop,
+                  values_from = value)
+
+  })
+
+  ## Create sensitivity user data table ----
+  output$sens_feat_table_user <- renderDataTable(
+    sens_df_user() # NEED TO MERGE THESE TWO FUNCTIONS
+  )
+
+  ## Create sensitivity sg data table ----
+  output$sens_feat_table_sg <- renderDataTable(
+    sens_df_sg()
+  )
+
+  ## Create polygon property data table ----
+  output$property_table_user <- renderDataTable(
+    prop_df_user()
+  )
+  ## Create polygon property data table ----
+  output$property_table_point <- renderDataTable(
+    prop_df_point()
+  )
 
 }
 
