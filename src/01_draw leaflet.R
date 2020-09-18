@@ -18,12 +18,14 @@ library(leaflet.esri)
 load("data input/spatial_data_inputs.RData")
 latlongCRS <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
+crane_points <- crane_points %>%
+  distinct(geometry, .keep_all = TRUE)
+
 # Load functions ----------------------------------------------------------
 
-## Add if neccessary
+## Add if necessary
 
 # Leaflet map -------------------------------------------------------------
-
 nogo_basemap <- leaflet(
   high_sens_uni
 ) %>%
