@@ -26,7 +26,7 @@ source("src/01_draw leaflet.R")
 ## UI ----
 
 header <- dashboardHeader(
-  title = "No-go Zones Map"
+  title = "No-Go Zones Map"
 )
 
 sidebar <- dashboardSidebar(
@@ -70,7 +70,8 @@ body <- dashboardBody(
                                       fixed = TRUE, draggable = FALSE,
                                       top = 350, right = 30, left = "auto", bottom = "auto",
                                       width = "auto", height = "auto",
-                                      actionButton("map_reset", "Clear map")
+                                      actionButton("map_reset", "Clear map"),
+                                      actionButton("add_cranes", "Add cranes")
                                       )
                         )
                       )
@@ -112,6 +113,28 @@ server <- function(input, output, session) {
     nogo_basemap
   })
 
+  ## Add cranes ----
+
+  observeEvent(input$add_cranes,{
+    leafletProxy("nogomap") %>%
+      addPolygons(data = crane_segs,
+                  fillColor = "black",
+                  stroke = TRUE,
+                  color = "black",
+                  group = "cranes") %>%
+      # addMarkers(data  = crane_points,
+      #            group = "cranes",
+      #            clusterOptions = markerClusterOptions()
+      #            )
+      addCircleMarkers(data = crane_points,
+                       radius = 3,
+                       fillColor = "orange",
+                       stroke = FALSE,
+                       fillOpacity = 0.9,
+                       group = "cranes")
+
+  })
+
   ## Reset map to original state ----
   observeEvent(input$map_reset,{
 
@@ -121,6 +144,7 @@ server <- function(input, output, session) {
               zoom = 6) %>%
       clearGroup("User shapefile") %>%
       clearGroup("User point") %>%
+      clearGroup("cranes") %>%
       clearControls() %>%
       addLegend("bottomright",
                 colors = c("red","lime","blue","yellow"),
