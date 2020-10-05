@@ -7,7 +7,11 @@ library(rgdal)
 library(shinythemes)
 library(DT)
 
-source("src/01_draw leaflet.R")
+# renv::init()
+# renv::snapshot()
+# renv::restore()
+
+source("src/01_draw_leaflet.R")
 
 ## UI ----
 
