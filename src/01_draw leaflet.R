@@ -13,6 +13,9 @@ library(leaflet.extras)
 library(leaflet.esri)
 ## ________________________________________________________________________
 
+# Increase upload file size -----------------------------------------------
+maxsize_MB <- 30 # megabytes
+options(shiny.maxRequestSize = maxsize_MB*1024^2)
 
 # Load data ---------------------------------------------------------------
 load("data input/spatial_data_inputs.RData")
