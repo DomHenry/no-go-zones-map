@@ -7,20 +7,6 @@ library(rgdal)
 library(shinythemes)
 library(DT)
 
-## Increase upload file size
-maxsize_MB <- 30 # megabytes
-options(shiny.maxRequestSize = maxsize_MB*1024^2)
-
-# See https://shiny.rstudio.com/gallery/superzip-example.html
-# Read in shapefile https://gist.github.com/RCura/9587685
-
-# Good guide
-# https://www.paulamoraga.com/book-geospatial/sec-shinyexample.html
-
-## Reactivity
-# https://stackoverflow.com/questions/53016404/advantages-of-reactive-vs-observe-vs-observeevent
-
-
 source("src/01_draw leaflet.R")
 
 ## UI ----
@@ -43,7 +29,7 @@ body <- dashboardBody(
             fluidRow(
                   column(
                     width = 3,
-                    box(title = "inputs", width = NULL, solidHeader = TRUE,
+                    box(title = "User inputs", width = NULL, solidHeader = TRUE,
                         status = "primary",
                         fileInput("user_shape", "Upload development footprint (kml or shp)",
                                   multiple = TRUE,
@@ -70,8 +56,7 @@ body <- dashboardBody(
                                       fixed = TRUE, draggable = FALSE,
                                       top = 350, right = 30, left = "auto", bottom = "auto",
                                       width = "auto", height = "auto",
-                                      actionButton("map_reset", "Clear map"),
-                                      actionButton("add_cranes", "Add cranes")
+                                      actionButton("map_reset", "Clear map")
                                       )
                         )
                       )
@@ -93,7 +78,8 @@ body <- dashboardBody(
             ),
 
     tabItem(tabName = "help",
-            h2("Help to come")
+            h2("Help to come"),
+            h3("Add link to EST and CSU email address")
     )
   )
 )
@@ -111,28 +97,6 @@ server <- function(input, output, session) {
   ## Plot base map ----
   output$nogomap <- renderLeaflet({
     nogo_basemap
-  })
-
-  ## Add cranes ----
-
-  observeEvent(input$add_cranes,{
-    leafletProxy("nogomap") %>%
-      addPolygons(data = crane_segs,
-                  fillColor = "black",
-                  stroke = TRUE,
-                  color = "black",
-                  group = "cranes") %>%
-      # addMarkers(data  = crane_points,
-      #            group = "cranes",
-      #            clusterOptions = markerClusterOptions()
-      #            )
-      addCircleMarkers(data = crane_points,
-                       radius = 3,
-                       fillColor = "orange",
-                       stroke = FALSE,
-                       fillOpacity = 0.9,
-                       group = "cranes")
-
   })
 
   ## Reset map to original state ----
@@ -186,6 +150,11 @@ server <- function(input, output, session) {
                           shpdf$name[grep(pattern = "*.shp$", shpdf$name)],
                           sep = "/"
     ))
+
+    poly <- poly %>%
+      st_transform(crs = latlongCRS)
+
+    st_crs(poly) <- latlongCRS
     poly
   })
 
@@ -427,3 +396,11 @@ shinyApp(ui = ui, server = server)
 
 ## Footnotes ----
 
+# See https://shiny.rstudio.com/gallery/superzip-example.html
+# Read in shapefile https://gist.github.com/RCura/9587685
+
+# Good guide
+# https://www.paulamoraga.com/book-geospatial/sec-shinyexample.html
+
+## Reactivity
+# https://stackoverflow.com/questions/53016404/advantages-of-reactive-vs-observe-vs-observeevent
