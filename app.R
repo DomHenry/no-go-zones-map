@@ -2,6 +2,7 @@ library(sf)
 library(tidyverse)
 library(shiny)
 library(shinydashboard)
+library(shinyjs)
 library(leaflet)
 library(rgdal)
 library(shinythemes)
@@ -19,76 +20,121 @@ header <- dashboardHeader(
   title = "No-Go Zones Map"
 )
 
+## Sidebar ----
 sidebar <- dashboardSidebar(
   sidebarMenu(
+    menuItem("Welcome", tabName = "welcome"),
     menuItem("Interactive map", tabName = "int_map"),
     menuItem("Data output", tabName = "data_output"),
     menuItem("Help", tabName = "help")
   )
 )
 
+## Body ----
 body <- dashboardBody(
   tabItems(
-    tabItem(tabName = "int_map",
-            fluidRow(
-                  column(
-                    width = 3,
-                    box(title = "User inputs", width = NULL, solidHeader = TRUE,
-                        status = "primary",
-                        fileInput("user_shape", "Upload development footprint (kml or shp)",
-                                  multiple = TRUE,
-                                  accept = c(".csv",".kml",".zip",
-                                             ".shx", ".shp", ".sbn", ".sbx",
-                                             ".dbf",".prj")),
-                        actionButton("plot_footprint", "Plot footprint"),
-                        tags$hr(),
-                        textInput("sgcode", "Enter 21 digit SG code", ""),
-                        actionButton("search_prop", "Search property"),
-                        br(),
-                        tags$hr(),
-                        tags$b("Enter latitude/longitude to add point"),
-                        numericInput("lat", "Latitude", value = 0),
-                        numericInput("long", "Longitude", value = 0),
-                        actionButton("add_point", "Add point")
-                        )
-                  ),
-                  column(
-                    width = 9,
-                    box(title = NULL, width = NULL, solidHeader = TRUE,
-                        leafletOutput("nogomap", width = "100%", height = 620),
-                        absolutePanel(id = "clear_control", class = "panel panel-default",
-                                      fixed = TRUE, draggable = FALSE,
-                                      top = 350, right = 30, left = "auto", bottom = "auto",
-                                      width = "auto", height = "auto",
-                                      actionButton("map_reset", "Clear map")
-                                      )
-                        )
-                      )
-                  )
-          ),
-
-    tabItem(tabName = "data_output",
-            h3("Some outputs"),
-            tags$b("USER"),
-            dataTableOutput("sens_feat_table_user"),
-            tags$hr(),
-            tags$b("SG"),
-            dataTableOutput("sens_feat_table_sg"),
-            tags$hr(),
-            tags$b("USER PROPERTY"),
-            dataTableOutput("property_table_user"),
-            tags$b("POINT PROPERTY"),
-            dataTableOutput("property_table_point")
+    tabItem(
+      tabName = "welcome",
+      h1("Welcome to the No-Go Map"),
+      h1("Load time is approximately 10 seconds - please be patient"),
+      h1("Naviagte to 'Interactive Map' tab to get started")
+    ),
+    tabItem(
+      tabName = "int_map",
+      fluidRow(
+        column(
+          width = 3,
+          box(
+            title = "User inputs", width = NULL, solidHeader = TRUE,
+            status = "primary",
+            useShinyjs(), # Add this to allow shinyjs functions to work in server
+            fileInput("user_shape", "Upload development footprint (kml or shp)",
+              multiple = TRUE,
+              accept = c(
+                ".csv", ".kml", ".zip",
+                ".shx", ".shp", ".sbn", ".sbx",
+                ".dbf", ".prj"
+              )
             ),
+            actionButton("plot_footprint", "Plot footprint"),
+            tags$hr(),
+            textInput("sgcode", "Enter 21 digit SG code", "K436N0FS000000016416000001"),
+            actionButton("search_prop", "Search property"),
+            br(),
+            tags$hr(),
+            tags$b("Enter latitude/longitude to add point"),
+            numericInput("lat", "Latitude", value = -30.375),
+            numericInput("long", "Longitude", value = 30.6858),
+            actionButton("add_point", "Add point")
+          )
+        ),
+        column(
+          width = 9,
+          box(
+            title = NULL, width = NULL, solidHeader = TRUE,
+            leafletOutput("nogomap", width = "100%", height = 620),
+            absolutePanel(
+              id = "clear_control", class = "panel panel-default",
+              fixed = TRUE, draggable = FALSE,
+              top = 350, right = 30, left = "auto", bottom = "auto",
+              width = "auto", height = "auto",
+              actionButton("map_reset", "Clear map inputs")
+            )
+          )
+        )
+      )
+    ),
 
-    tabItem(tabName = "help",
-            h2("Help to come"),
-            h3("Add link to EST and CSU email address")
+    tabItem(
+      tabName = "data_output",
+      fluidRow(
+        box(
+          title = "Sensitive species - user polygon",
+          width = 4, solidHeader = TRUE, status = "primary",
+          dataTableOutput("sens_feat_table_user")
+        ),
+        box(
+          title = "Property details - user polygon",
+          width = 8, solidHeader = TRUE, status = "primary",
+          dataTableOutput("property_table_user")
+        )
+      ),
+      fluidRow(
+        box(
+          title = "Sensitive species - SG code",
+          width = 4, solidHeader = TRUE, status = "success",
+          dataTableOutput("sens_feat_table_sg")
+        ),
+        box(
+          title = "Property details - SG code",
+          width = 8, solidHeader = TRUE, status = "success",
+          dataTableOutput("property_table_sg")
+        )
+      ),
+      fluidRow(
+        box(
+          title = "Sensitive species - user point",
+          width = 4, solidHeader = TRUE, status = "warning",
+          "NEED TO ADD THIS FUNCTIONALITY"
+        ),
+        box(
+          title = "Property details - user point",
+          width = 8, solidHeader = TRUE, status = "warning",
+          dataTableOutput("property_table_point")
+        )
+      )
+    ),
+
+    tabItem(
+      tabName = "help",
+      h2("Help to come"),
+      h3("EST: https://screening.environment.gov.za/screeningtool/#/pages/welcome"),
+      h3("Support: science@ewt.org.za")
     )
   )
 )
 
-
+## Dashboard page ----
 ui <- dashboardPage(
   header,
   sidebar,
@@ -121,20 +167,19 @@ server <- function(input, output, session) {
                 opacity = 0.6) %>%
       removeLayersControl() %>%
       addLayersControl(
-        baseGroups = c("Topographic", "Gray", "Streets","Imagery"),
+        baseGroups = c("Topographic", "Streets","Imagery"),
         overlayGroups= c("No-go areas","Protected areas","Farm portions","ERFs"),
         options = layersControlOptions(collapsed=FALSE)
       ) %>%
       hideGroup("Farm portions")
 
+    ## Reset input boxes
+    updateTextInput(session, "sgcode", label = "Enter 21 digit SG code", value = "")
+    updateNumericInput(session, "lat", "Latitude", value = 0)
+    updateNumericInput(session, "long", "Longitude", value = 0)
+    shinyjs::reset("user_shape") # Doesn't remove underlying data (only text in widget)
+
   })
-
-  ## Reset datatables when map is cleared ----
-
-  ## This removes the table completely (not very useful beacause it's not dynamic)
-  # observeEvent(input$map_reset,{
-  #   removeUI(selector = "#property_table") # Need the '#' before the name
-  # })
 
   ## Upload and extract user polygon ----
   user_polygon <- reactive({
@@ -183,11 +228,11 @@ server <- function(input, output, session) {
       setView(
         lng = cen$x,
         lat = cen$y,
-        zoom = 10
+        zoom = 11
       )  %>%
       removeLayersControl() %>%
       addLayersControl(
-        baseGroups = c("Topographic", "Gray", "Streets","Imagery"),
+        baseGroups = c("Topographic", "Streets","Imagery"),
         overlayGroups= c("No-go areas","Protected areas","Farm portions","ERFs", "User shapefile"),
         options = layersControlOptions(collapsed=FALSE)
       ) %>%
@@ -204,8 +249,14 @@ server <- function(input, output, session) {
 
 
   ## Add user point ----
-  "20.5"
+
+  # Farm
   "-33.7"
+  "20.5"
+  # ERF
+  "-30.375"
+  "30.6858"
+
    user_point <- reactive({
     st_sfc(st_point(c(input$long,input$lat)),
            crs = latlongCRS)
@@ -220,7 +271,7 @@ server <- function(input, output, session) {
       ) %>%
       setView(lng = user_point()[[1]][1],
               lat = user_point()[[1]][2],
-              zoom = 8)
+              zoom = 13)
 
   })
 
@@ -276,7 +327,7 @@ server <- function(input, output, session) {
       )  %>%
       removeLayersControl() %>%
       addLayersControl(
-        baseGroups = c("Topographic", "Gray", "Streets","Imagery"),
+        baseGroups = c("Topographic", "Streets","Imagery"),
         overlayGroups= c("No-go areas","Protected areas","Farm portions","ERFs", "User shapefile"),
         options = layersControlOptions(collapsed=FALSE)
       ) %>%
@@ -325,73 +376,165 @@ server <- function(input, output, session) {
 
   })
 
-  ## Intersect polygon and farm layer ----
+  ## Intersect polygon and farm/erf layer ----
+
   prop_df_user <- reactive({
 
     req(input$user_shape)
     farm_int <- st_intersection(user_polygon(),farms)
+    erf_int <- st_intersection(user_polygon(),erf_all)
 
-    farm_df <- farm_int %>%
-      st_drop_geometry() %>%
-      as_tibble() %>%
-      select(-GID) %>%
-      select(PRCL_KEY, PRCL_TYPE, ID, PROVINCE, MAJ_REGION, MAJ_CODE, PARCEL_NO, PORTION) %>%
-      mutate_all(as.character)
+    if (nrow(farm_int) > 0) {
+      farm_df <- farm_int %>%
+        st_drop_geometry() %>%
+        as_tibble() %>%
+        select(-GID) %>%
+        select(PRCL_KEY, PRCL_TYPE, ID, PROVINCE, MAJ_REGION, MAJ_CODE, PARCEL_NO, PORTION) %>%
+        mutate_all(as.character)
 
-    farm_df %>%
-      mutate(prop = str_c("property_", 1:nrow(.))) %>%
-      pivot_longer(cols =-prop,
-                   names_to = "Farm_field",
-                   values_to = "value") %>%
-      pivot_wider(names_from = prop,
-                  values_from = value)
+      farm_df %>%
+        mutate(prop = str_c("property_", 1:nrow(.))) %>%
+        pivot_longer(cols =-prop,
+                     names_to = "Farm_field",
+                     values_to = "value") %>%
+        pivot_wider(names_from = prop,
+                    values_from = value)
+    } else if (nrow(erf_int) > 0){
+
+      erf_df <- erf_int %>%
+        st_drop_geometry() %>%
+        as_tibble() %>%
+        select(-GID) %>%
+        select(PRCL_KEY, PRCL_TYPE, ID, PROVINCE, MAJ_REGION, MAJ_CODE, PARCEL_NO, PORTION) %>%
+        mutate_all(as.character) %>%
+        mutate(prop = str_c("property_", 1:nrow(.)))
+
+      erf_df %>%
+        pivot_longer(cols =-prop,
+                     names_to = "ERF_field",
+                     values_to = "value") %>%
+        pivot_wider(names_from = prop,
+                    values_from = value)
+
+    }
+
+
 
   })
 
-  ## Intersect point and farm layer ----
+  ## Intersect point and farm/erf layer ----
 
-  # NEED TO MAKE THIS SEARCH FOR ERFs TOO!
   prop_df_point <- reactive({
 
     req(user_point())
 
     farm_int <- st_intersection(farms, user_point())
+    erf_int <- st_intersection(erf_all, user_point())
 
-    farm_df <- farm_int %>%
+    if (nrow(farm_int) > 0) {
+
+      farm_df <- farm_int %>%
+        st_drop_geometry() %>%
+        as_tibble() %>%
+        select(-GID) %>%
+        select(PRCL_KEY, PRCL_TYPE, ID, PROVINCE, MAJ_REGION, MAJ_CODE, PARCEL_NO, PORTION) %>%
+        mutate_all(as.character)
+
+      farm_df %>%
+        mutate(prop = str_c("property_", 1:nrow(.))) %>%
+        pivot_longer(cols =-prop,
+                     names_to = "Farm_field",
+                     values_to = "value") %>%
+        pivot_wider(names_from = prop,
+                    values_from = value)
+
+    } else if (nrow(erf_int) > 0) {
+
+      erf_df <- erf_int %>%
+        st_drop_geometry() %>%
+        as_tibble() %>%
+        select(-GID) %>%
+        select(PRCL_KEY, PRCL_TYPE, ID, PROVINCE, MAJ_REGION, MAJ_CODE, PARCEL_NO, PORTION) %>%
+        mutate_all(as.character) %>%
+        mutate(prop = str_c("property_", 1:nrow(.)))
+
+      erf_df %>%
+        pivot_longer(cols =-prop,
+                     names_to = "ERF_field",
+                     values_to = "value") %>%
+        pivot_wider(names_from = prop,
+                    values_from = value)
+
+    }
+
+  })
+
+  ## Create sensitivity user polygon data table ----
+  output$sens_feat_table_user <- renderDataTable(
+    sens_df_user() # NEED TO MERGE THESE TWO FUNCTIONS
+  )
+
+  ## Create sensitivity SG data table ----
+  output$sens_feat_table_sg <- DT::renderDataTable(
+    sens_df_sg()
+  )
+
+  ## Create sensitivity point data table ----
+  # TODO
+
+  ## Create user polygon property data table ----
+
+  # See help for DT setup: https://rstudio.github.io/DT/options.html
+  #                        https://shiny.rstudio.com/articles/datatables.html
+  output$property_table_user <- DT::renderDataTable(
+    prop_df_user(),
+    options = list(
+      deferRender = TRUE,
+      scrollY = 400,
+      scrollX = TRUE,
+      scroller = TRUE,
+      autoWidth = FALSE,
+      columnDefs = list(list(width = '5px', targets = c(1,2,3)))
+    )
+  )
+
+  ## Create SG code property data table ----
+  output$property_table_sg <- renderDataTable({
+
+    req(prop_extract())
+
+    farm_df <- prop_extract() %>%
       st_drop_geometry() %>%
       as_tibble() %>%
       select(-GID) %>%
       select(PRCL_KEY, PRCL_TYPE, ID, PROVINCE, MAJ_REGION, MAJ_CODE, PARCEL_NO, PORTION) %>%
       mutate_all(as.character)
 
-    farm_df %>%
+    farm_df <- farm_df %>%
       mutate(prop = str_c("property_", 1:nrow(.))) %>%
       pivot_longer(cols =-prop,
                    names_to = "Farm_field",
                    values_to = "value") %>%
       pivot_wider(names_from = prop,
                   values_from = value)
-
+    farm_df
   })
 
-  ## Create sensitivity user data table ----
-  output$sens_feat_table_user <- renderDataTable(
-    sens_df_user() # NEED TO MERGE THESE TWO FUNCTIONS
-  )
-
-  ## Create sensitivity sg data table ----
-  output$sens_feat_table_sg <- renderDataTable(
-    sens_df_sg()
-  )
-
-  ## Create polygon property data table ----
-  output$property_table_user <- renderDataTable(
-    prop_df_user()
-  )
-  ## Create polygon property data table ----
+  ## Create point property data table ----
   output$property_table_point <- renderDataTable(
-    prop_df_point()
+  prop_df_point(),
+  extensions = "Buttons",
+  options = list(
+    dom = "Bfrtip",
+    buttons =
+      list("copy", "print", list(
+        extend = "collection",
+        buttons = c("csv", "excel", "pdf"),
+        text = "Download"
+      ))
   )
+)
+
 
 }
 
