@@ -11,6 +11,7 @@ library(tidyverse)
 library(leaflet)
 library(leaflet.extras)
 library(leaflet.esri)
+library(leafem)
 ## ________________________________________________________________________
 
 # Increase upload file size -----------------------------------------------
@@ -21,28 +22,28 @@ options(shiny.maxRequestSize = maxsize_MB*1024^2)
 load("data_input/spatial_data_inputs.RData")
 latlongCRS <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
-crane_points <- crane_points %>%
-  distinct(geometry, .keep_all = TRUE)
+# crane_points <- crane_points %>%
+#   distinct(geometry, .keep_all = TRUE)
 
 # Load functions ----------------------------------------------------------
 
 ## Add if necessary
 
-# Leaflet map -------------------------------------------------------------
+# Base layers -------------------------------------------------------------
+
+## TRY SOME OF THESE BASEMAPS
+# http://leaflet-extras.github.io/leaflet-providers/preview/
+
 nogo_basemap <- leaflet(
   high_sens_uni
 ) %>%
+  # addTiles() %>% # Open maps (default)
+  addEsriBasemapLayer(
+  key = esriBasemapLayers$Topographic,
+  options = list(detectRetina = TRUE),
+  group = "Topographic"
+  ) %>%
   addEsriBasemapLayer(  ## See https://esri.github.io/esri-leaflet/api-reference/layers/basemap-layer.html
-    key = esriBasemapLayers$Topographic,
-    options = list(detectRetina = TRUE),
-    group = "Topographic"
-  ) %>%
-  addEsriBasemapLayer(
-    key = esriBasemapLayers$Gray,
-    options = list(detectRetina = TRUE),
-    group = "Gray"
-  ) %>%
-  addEsriBasemapLayer(
     key = esriBasemapLayers$Streets,
     options = list(detectRetina = TRUE),
     group = "Streets"
@@ -72,6 +73,8 @@ nogo_basemap <- leaflet(
     options = pathOptions(pane = "nogo_polys")
   )
 
+
+# Farm portions -----------------------------------------------------------
 nogo_basemap <- nogo_basemap %>%
   addPolygons(
     data = farms,
@@ -87,6 +90,7 @@ nogo_basemap <- nogo_basemap %>%
     options = pathOptions(pane = "farm_polys")
   )
 
+# ERFs --------------------------------------------------------------------
 nogo_basemap <- nogo_basemap %>%
   addPolygons(
     data = erf,
@@ -103,6 +107,8 @@ nogo_basemap <- nogo_basemap %>%
     options = pathOptions(pane = "erf_polys")
   )
 
+
+# Protected areas + RSA Border --------------------------------------------
 nogo_basemap <- nogo_basemap %>%
   addPolygons(
     data = pa,
@@ -128,9 +134,14 @@ nogo_basemap <- nogo_basemap %>%
     smoothFactor = 2
   )
 
+
+# Layers control ----------------------------------------------------------
 nogo_basemap <- nogo_basemap %>%
   addLayersControl(
-    baseGroups = c("Topographic", "Gray", "Streets","Imagery"),
+    baseGroups = c("Topographic",
+                   "Streets",
+                   "Imagery"
+                   ),
     overlayGroups= c("No-go areas","Protected areas","Farm portions","ERFs"),
     options = layersControlOptions(collapsed=FALSE)
   ) %>%
@@ -147,4 +158,15 @@ nogo_basemap <- nogo_basemap %>%
     lat = -29.1707702,
     zoom = 6
   ) %>%
-  addResetMapButton()
+  addResetMapButton() %>%
+  leafem::addMouseCoordinates() #%>%
+  # leafem::addLogo(img = "data_input/ewt_01.png",
+  #                 src = "local",
+  #                 url = "https://www.ewt.org.za/",
+  #                 position = "topleft",
+  #                 offset.x = 50,
+  #                 width = 60)
+
+# nogo_basemap
+# rm(list = ls()[!(ls() %in% c('nogo_basemap'))])
+# save.image("data_input/nogo_base.RData")
