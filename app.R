@@ -1,3 +1,4 @@
+## Libraries ----
 library(sf)
 library(tidyverse)
 library(shiny)
@@ -8,14 +9,20 @@ library(rgdal)
 library(shinythemes)
 library(DT)
 
+
+# renv --------------------------------------------------------------------
+
 # renv::init()
 # renv::snapshot()
 # renv::restore()
+# Use renv::history() to view past versions of renv.lock that have been committed to your repository
+# Use renv::revert() to pull out an old version of renv.lock based on the previously-discovered commit
+# pkg_check <- installed.packages()
 
+# Source ------------------------------------------------------------------
 source("src/01_draw_leaflet.R")
 
 ## UI ----
-
 header <- dashboardHeader(
   title = "No-Go Zones Map"
 )
@@ -38,7 +45,8 @@ body <- dashboardBody(
       h1("Welcome to the No-Go Map"),
       h1("Load time is approximately 10 seconds - please be patient"),
       h1("Naviagte to 'Interactive Map' tab to get started"),
-      h1("In order to load shapefiles - select all files simultaneously")
+      h1("In order to load shapefiles - select all files simultaneously"),
+      h1("Try out functionality with the example SG code, or Lat long point below")
     ),
     tabItem(
       tabName = "int_map",
@@ -52,7 +60,7 @@ body <- dashboardBody(
             fileInput("user_shape", "Upload development footprint (kml or shp)",
               multiple = TRUE,
               accept = c(
-                ".csv", ".kml", ".zip",
+                # ".csv", ".kml", ".zip",
                 ".shx", ".shp", ".sbn", ".sbx",
                 ".dbf", ".prj"
               )
@@ -80,8 +88,18 @@ body <- dashboardBody(
               top = 350, right = 30, left = "auto", bottom = "auto",
               width = "auto", height = "auto",
               actionButton("map_reset", "Clear map inputs")
+            ),
+            shinyjs::hidden(div(id = "downloaddiv",
+                       absolutePanel(
+                         id = "download_shapefile", class = "panel panel-default",
+                         fixed = TRUE, draggable = FALSE,
+                         top = 350, right = 790, left = "auto", bottom = "auto",
+                         width = "auto", height = "auto",
+                         downloadButton("downloadData", "Download shape")
+                         )
+                       )
+                   )
             )
-          )
         )
       )
     ),
@@ -123,6 +141,18 @@ body <- dashboardBody(
           width = 8, solidHeader = TRUE, status = "warning",
           dataTableOutput("property_table_point")
         )
+      ),
+      fluidRow(
+        box(
+          title = "Sensitive species - user hand drawn",
+          width = 4, solidHeader = TRUE, status = "danger",
+          dataTableOutput("sens_feat_table_hand")
+        ),
+        box(
+          title = "Property details - user hand drawn",
+          width = 8, solidHeader = TRUE, status = "danger",
+          dataTableOutput("property_table_hand")
+        )
       )
     ),
 
@@ -150,6 +180,42 @@ server <- function(input, output, session) {
     nogo_basemap
   })
 
+  ## Show download button ----
+  # Note - map name (e.g., nogomap) is the first part of "_draw_new_feature"
+  observeEvent(input$nogomap_draw_new_feature, {
+    shinyjs::show("downloaddiv")
+  })
+
+  ## Download user drawn shapes ----
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      paste("shapefile", "zip", sep=".")
+    },
+    content = function(file) {
+      temp_shp <- tempdir()
+      geo = input$nogomap_draw_new_feature$geometry$coordinates[[1]]
+      lng = map_dbl(geo, `[[`, 1)
+      lat = map_dbl(geo, `[[`, 2)
+      shp = st_as_sf(tibble(lon = lng, lat = lat),
+                     coords = c("lon", "lat"),
+                     crs = 4326) %>%
+        summarise(geometry = st_combine(geometry)) %>%
+        st_cast("POLYGON")
+
+      shp_files <- list.files(temp_shp, "shapefile*",
+                              full.names = TRUE)
+      if(length(shp_files) != 0) {
+        file.remove(shp_files)
+      }
+      st_write(shp, paste(temp_shp, "shapefile.shp", sep = "\\"))
+      # copy the zip file to the file argument
+      shp_files <- list.files(temp_shp, "shapefile*",
+                              full.names = TRUE)
+      zip(zipfile = file, files = shp_files, flags = "-j")
+      file.remove(shp_files)
+    }
+  )
+
   ## Reset map to original state ----
   observeEvent(input$map_reset,{
 
@@ -174,11 +240,20 @@ server <- function(input, output, session) {
       ) %>%
       hideGroup("Farm portions")
 
+      # NOT WORKING:
+      # removeDrawToolbar(clearFeatures=TRUE) #%>%
+      # addDrawToolbar(polylineOptions = FALSE,
+      #                markerOptions = FALSE,
+      #                circleMarkerOptions = FALSE,
+      #                circleOptions = FALSE,
+      #                editOptions = editToolbarOptions())
+
     ## Reset input boxes
     updateTextInput(session, "sgcode", label = "Enter 21 digit SG code", value = "")
     updateNumericInput(session, "lat", "Latitude", value = 0)
     updateNumericInput(session, "long", "Longitude", value = 0)
     shinyjs::reset("user_shape") # Doesn't remove underlying data (only text in widget)
+    shp_value$poly_shp <- NULL
 
   })
 
@@ -343,6 +418,44 @@ server <- function(input, output, session) {
 
   })
 
+
+  ## Intersect hand drawn polygon and high sensitivity layer ----
+
+  # Create holder for reactive value
+  shp_value <- reactiveValues(
+    poly_shp = NULL
+  )
+
+  # Populate when shape is drawn
+  observeEvent(input$nogomap_draw_new_feature, {
+    shp_value$poly_shp = input$nogomap_draw_new_feature$geometry$coordinates[[1]]
+  })
+
+   sens_df_hand <- reactive({
+
+    # Use reactive value
+    req(shp_value)
+    geo <- shp_value$poly_shp
+    lng <- map_dbl(geo, `[[`, 1)
+    lat <- map_dbl(geo, `[[`, 2)
+    shp <- st_as_sf(tibble(lon = lng, lat = lat),
+                   coords = c("lon", "lat"),
+                   crs = 4326) %>%
+      summarise(geometry = st_combine(geometry)) %>%
+      st_cast("POLYGON")
+
+    nogo_user_int <- st_intersection(shp, high_sens_all)
+
+    df <- nogo_user_int %>%
+      st_drop_geometry() %>%
+      group_by(SENSFEA) %>%
+      tally() %>%
+      rename(Species = SENSFEA, NoGo_count = n)
+
+    df
+
+  })
+
   ## Intersect user polygon and high sensitivity layer ----
   sens_df_user <- reactive({
 
@@ -418,9 +531,63 @@ server <- function(input, output, session) {
 
     })
 
+  ## Intersect hand drawn polygon and farm/erf layer ----
+  prop_df_hand <- reactive({
+
+    req(shp_value)
+
+    geo <- shp_value$poly_shp
+    lng <- map_dbl(geo, `[[`, 1)
+    lat <- map_dbl(geo, `[[`, 2)
+    shp <- st_as_sf(tibble(lon = lng, lat = lat),
+                    coords = c("lon", "lat"),
+                    crs = 4326) %>%
+      summarise(geometry = st_combine(geometry)) %>%
+      st_cast("POLYGON")
+
+    farm_int <- st_intersection(shp,farms)
+    erf_int <- st_intersection(shp,erf_all)
+
+
+    if (nrow(farm_int) > 0) {
+      farm_df <- farm_int %>%
+        st_drop_geometry() %>%
+        as_tibble() %>%
+        select(-GID) %>%
+        select(PRCL_KEY, PRCL_TYPE, ID, PROVINCE, MAJ_REGION, MAJ_CODE, PARCEL_NO, PORTION) %>%
+        mutate_all(as.character)
+
+      farm_df %>%
+        mutate(prop = str_c("property_", 1:nrow(.))) %>%
+        pivot_longer(cols =-prop,
+                     names_to = "Farm_field",
+                     values_to = "value") %>%
+        pivot_wider(names_from = prop,
+                    values_from = value)
+    } else if (nrow(erf_int) > 0){
+
+      erf_df <- erf_int %>%
+        st_drop_geometry() %>%
+        as_tibble() %>%
+        select(-GID) %>%
+        select(PRCL_KEY, PRCL_TYPE, ID, PROVINCE, MAJ_REGION, MAJ_CODE, PARCEL_NO, PORTION) %>%
+        mutate_all(as.character) %>%
+        mutate(prop = str_c("property_", 1:nrow(.)))
+
+      erf_df %>%
+        pivot_longer(cols =-prop,
+                     names_to = "ERF_field",
+                     values_to = "value") %>%
+        pivot_wider(names_from = prop,
+                    values_from = value)
+
+    }
+
+
+
+  })
 
   ## Intersect polygon and farm/erf layer ----
-
   prop_df_user <- reactive({
 
     req(input$user_shape)
@@ -527,6 +694,11 @@ server <- function(input, output, session) {
     sens_df_sg()
   )
 
+  ## Create sensitivity hand data table ----
+  output$sens_feat_table_hand <- DT::renderDataTable(
+    sens_df_hand()
+  )
+
   ## Create user polygon property data table ----
 
   # See help for DT setup: https://rstudio.github.io/DT/options.html
@@ -580,6 +752,10 @@ server <- function(input, output, session) {
   )
 )
 
+   ## Create hand polygon property data table ----
+   output$property_table_hand <- renderDataTable(
+     prop_df_hand()
+   )
 
 }
 

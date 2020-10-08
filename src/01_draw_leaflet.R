@@ -159,7 +159,18 @@ nogo_basemap <- nogo_basemap %>%
     zoom = 6
   ) %>%
   addResetMapButton() %>%
-  leafem::addMouseCoordinates() #%>%
+  leafem::addMouseCoordinates() %>%
+  addDrawToolbar(polylineOptions = FALSE,
+                 polygonOptions = drawPolygonOptions(
+                   shapeOptions = drawShapeOptions(color = "orange", fillColor = "orange")
+                   ),
+                 rectangleOptions = drawRectangleOptions(
+                   shapeOptions = drawShapeOptions(color = "orange", fillColor = "orange")
+                   ),
+                 markerOptions = FALSE,
+                 circleMarkerOptions = FALSE,
+                 circleOptions = FALSE,
+                 editOptions = editToolbarOptions())#%>%
   # leafem::addLogo(img = "data_input/ewt_01.png",
   #                 src = "local",
   #                 url = "https://www.ewt.org.za/",
