@@ -37,7 +37,8 @@ body <- dashboardBody(
       tabName = "welcome",
       h1("Welcome to the No-Go Map"),
       h1("Load time is approximately 10 seconds - please be patient"),
-      h1("Naviagte to 'Interactive Map' tab to get started")
+      h1("Naviagte to 'Interactive Map' tab to get started"),
+      h1("In order to load shapefiles - select all files simultaneously")
     ),
     tabItem(
       tabName = "int_map",
@@ -115,7 +116,7 @@ body <- dashboardBody(
         box(
           title = "Sensitive species - user point",
           width = 4, solidHeader = TRUE, status = "warning",
-          "NEED TO ADD THIS FUNCTIONALITY"
+          dataTableOutput("sens_feat_table_point")
         ),
         box(
           title = "Property details - user point",
@@ -376,6 +377,48 @@ server <- function(input, output, session) {
 
   })
 
+  # Intersect user point and high sensitivity layer ----
+
+  sens_df_point <- reactive({
+
+    req(user_point())
+
+    farm_int <- st_intersection(farms, user_point())
+    erf_int <- st_intersection(erf_all, user_point())
+
+    if (nrow(farm_int) > 0) {
+
+      farm_int <- farms %>%
+        filter(PRCL_KEY == farm_int$PRCL_KEY)
+
+      nogo_user_int <- st_intersection(farm_int, high_sens_all)
+
+      df <- nogo_user_int %>%
+        st_drop_geometry() %>%
+        group_by(SENSFEA) %>%
+        tally() %>%
+        rename(Species = SENSFEA, NoGo_count = n)
+      df
+
+
+    } else if (nrow(erf_int) > 0){
+
+      erf_int <- erf_all %>%
+        filter(PRCL_KEY == erf_int$PRCL_KEY)
+
+      nogo_user_int <- st_intersection(erf_int, high_sens_all)
+
+      df <- nogo_user_int %>%
+        st_drop_geometry() %>%
+        group_by(SENSFEA) %>%
+        tally() %>%
+        rename(Species = SENSFEA, NoGo_count = n)
+      df
+      }
+
+    })
+
+
   ## Intersect polygon and farm/erf layer ----
 
   prop_df_user <- reactive({
@@ -474,13 +517,15 @@ server <- function(input, output, session) {
     sens_df_user() # NEED TO MERGE THESE TWO FUNCTIONS
   )
 
+  ## Create sensitivity point data table ----
+  output$sens_feat_table_point <- DT::renderDataTable(
+    sens_df_point()
+  )
+
   ## Create sensitivity SG data table ----
   output$sens_feat_table_sg <- DT::renderDataTable(
     sens_df_sg()
   )
-
-  ## Create sensitivity point data table ----
-  # TODO
 
   ## Create user polygon property data table ----
 
