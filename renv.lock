@@ -1,6 +1,6 @@
 {
   "R": {
-    "Version": "4.0.2",
+    "Version": "4.0.3",
     "Repositories": [
       {
         "Name": "CRAN",
@@ -575,6 +575,13 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "f4f13345fcb00c51ace12f65dd18749f"
+    },
+    "profvis": {
+      "Package": "profvis",
+      "Version": "0.3.6",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "61d3d30ce122b6e55460a849d263e496"
     },
     "progress": {
       "Package": "progress",

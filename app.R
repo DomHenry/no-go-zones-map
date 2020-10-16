@@ -10,6 +10,11 @@ library(shinythemes)
 library(DT)
 
 
+# Profiling ---------------------------------------------------------------
+
+# https://lukesingham.com/shiny-r-performance-profiling/
+# profvis::profvis({ runApp(appDir = getwd())})
+
 # renv --------------------------------------------------------------------
 
 # renv::init()
@@ -20,6 +25,8 @@ library(DT)
 # pkg_check <- installed.packages()
 
 # Source ------------------------------------------------------------------
+library(profvis)
+
 source("src/01_draw_leaflet.R")
 
 ## UI ----
@@ -759,8 +766,10 @@ server <- function(input, output, session) {
 
 }
 
-# Run the application
+
+# Run the app -------------------------------------------------------------
 shinyApp(ui = ui, server = server)
+
 
 ## Footnotes ----
 
