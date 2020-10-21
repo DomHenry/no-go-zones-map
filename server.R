@@ -1,227 +1,164 @@
-## Libraries ----
-library(sf)
-library(tidyverse)
 library(shiny)
-library(shinydashboard)
-library(shinyjs)
-library(leaflet)
-library(rgdal)
-library(shinythemes)
-library(DT)
 
-
-# Profiling ---------------------------------------------------------------
-
-# https://lukesingham.com/shiny-r-performance-profiling/
-# profvis::profvis({ runApp(appDir = getwd())})
-
-# renv --------------------------------------------------------------------
-
-# renv::init()
-# renv::snapshot()
-# renv::restore()
-# Use renv::history() to view past versions of renv.lock that have been committed to your repository
-# Use renv::revert() to pull out an old version of renv.lock based on the previously-discovered commit
-# pkg_check <- installed.packages()
-
-# Source ------------------------------------------------------------------
-library(profvis)
-
-source("src/01_draw_leaflet.R")
-
-## UI ----
-header <- dashboardHeader(
-  title = "No-Go Zones Map"
-)
-
-## Sidebar ----
-sidebar <- dashboardSidebar(
-  sidebarMenu(
-    menuItem("Welcome", tabName = "welcome"),
-    menuItem("Interactive map", tabName = "int_map"),
-    menuItem("Data output", tabName = "data_output"),
-    menuItem("Help", tabName = "help")
-  )
-)
-
-## Body ----
-body <- dashboardBody(
-  tabItems(
-    tabItem(
-      tabName = "welcome",
-      h1("Welcome to the No-Go Map"),
-      h1("Load time is approximately 10 seconds - please be patient"),
-      h1("Naviagte to 'Interactive Map' tab to get started"),
-      h1("In order to load shapefiles - select all files simultaneously"),
-      h1("Try out functionality with the example SG code, or Lat long point below")
-    ),
-    tabItem(
-      tabName = "int_map",
-      fluidRow(
-        column(
-          width = 3,
-          box(
-            title = "User inputs", width = NULL, solidHeader = TRUE,
-            status = "primary",
-            useShinyjs(), # Add this to allow shinyjs functions to work in server
-            fileInput("user_shape", "Upload development footprint (kml or shp)",
-              multiple = TRUE,
-              accept = c(
-                # ".csv", ".kml", ".zip",
-                ".shx", ".shp", ".sbn", ".sbx",
-                ".dbf", ".prj"
-              )
-            ),
-            actionButton("plot_footprint", "Plot footprint"),
-            tags$hr(),
-            textInput("sgcode", "Enter 21 digit SG code", "K436N0FS000000016416000001"),
-            actionButton("search_prop", "Search property"),
-            br(),
-            tags$hr(),
-            tags$b("Enter latitude/longitude to add point"),
-            numericInput("lat", "Latitude", value = -30.375),
-            numericInput("long", "Longitude", value = 30.6858),
-            actionButton("add_point", "Add point")
-          )
-        ),
-        column(
-          width = 9,
-          box(
-            title = NULL, width = NULL, solidHeader = TRUE,
-            leafletOutput("nogomap", width = "100%", height = 620),
-            absolutePanel(
-              id = "clear_control", class = "panel panel-default",
-              fixed = TRUE, draggable = FALSE,
-              top = 350, right = 30, left = "auto", bottom = "auto",
-              width = "auto", height = "auto",
-              actionButton("map_reset", "Clear map inputs")
-            ),
-            shinyjs::hidden(div(id = "downloaddiv",
-                       absolutePanel(
-                         id = "download_shapefile", class = "panel panel-default",
-                         fixed = TRUE, draggable = FALSE,
-                         top = 350, right = 790, left = "auto", bottom = "auto",
-                         width = "auto", height = "auto",
-                         downloadButton("downloadData", "Download shape")
-                         )
-                       )
-                   )
-            )
-        )
-      )
-    ),
-
-    tabItem(
-      tabName = "data_output",
-      fluidRow(
-        box(
-          title = "Sensitive species - user polygon",
-          width = 4, solidHeader = TRUE, status = "primary",
-          dataTableOutput("sens_feat_table_user")
-        ),
-        box(
-          title = "Property details - user polygon",
-          width = 8, solidHeader = TRUE, status = "primary",
-          dataTableOutput("property_table_user")
-        )
-      ),
-      fluidRow(
-        box(
-          title = "Sensitive species - SG code",
-          width = 4, solidHeader = TRUE, status = "success",
-          dataTableOutput("sens_feat_table_sg")
-        ),
-        box(
-          title = "Property details - SG code",
-          width = 8, solidHeader = TRUE, status = "success",
-          dataTableOutput("property_table_sg")
-        )
-      ),
-      fluidRow(
-        box(
-          title = "Sensitive species - user point",
-          width = 4, solidHeader = TRUE, status = "warning",
-          dataTableOutput("sens_feat_table_point")
-        ),
-        box(
-          title = "Property details - user point",
-          width = 8, solidHeader = TRUE, status = "warning",
-          dataTableOutput("property_table_point")
-        )
-      ),
-      fluidRow(
-        box(
-          title = "Sensitive species - user hand drawn",
-          width = 4, solidHeader = TRUE, status = "danger",
-          dataTableOutput("sens_feat_table_hand")
-        ),
-        box(
-          title = "Property details - user hand drawn",
-          width = 8, solidHeader = TRUE, status = "danger",
-          dataTableOutput("property_table_hand")
-        )
-      )
-    ),
-
-    tabItem(
-      tabName = "help",
-      h2("Help to come"),
-      h3("EST: https://screening.environment.gov.za/screeningtool/#/pages/welcome"),
-      h3("Support: science@ewt.org.za")
-    )
-  )
-)
-
-## Dashboard page ----
-ui <- dashboardPage(
-  header,
-  sidebar,
-  body
-)
+# Load data ---------------------------------------------------------------
+load("data_input/spatial_data_inputs.RData")
+latlongCRS <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 ## Server ----
 server <- function(input, output, session) {
 
+  ## GEOMETRY PLOTTING ----
+
   ## Plot base map ----
   output$nogomap <- renderLeaflet({
-    nogo_basemap
+
+    leaflet() %>%
+      addEsriBasemapLayer(
+        key = esriBasemapLayers$Topographic,
+        options = list(detectRetina = TRUE),
+        group = "Topographic"
+      ) %>%
+      addEsriBasemapLayer(  ## See https://esri.github.io/esri-leaflet/api-reference/layers/basemap-layer.html
+        key = esriBasemapLayers$Streets,
+        options = list(detectRetina = TRUE),
+        group = "Streets"
+      ) %>%
+      addEsriBasemapLayer(
+        key = esriBasemapLayers$Imagery,
+        options = list(detectRetina = TRUE),
+        group = "Imagery"
+      ) %>%
+      addScaleBar(
+        position = "bottomleft"
+      ) %>%
+      addLayersControl(
+        baseGroups = c("Topographic",
+                       "Streets",
+                       "Imagery"
+        ),
+        overlayGroups= c("No-go areas"),
+        options = layersControlOptions(collapsed=FALSE)
+      ) %>%
+      setView(lng = 25.4015133,
+              lat = -29.1707702,
+              zoom = 6) %>%
+      addPolygons(
+        data = high_sens_uni,
+        group = "No-go areas",
+        popup = "NO-GO AREA",
+        label = "NoGO",
+        fillColor = "red",
+        fillOpacity = 0.75,
+        stroke = TRUE,
+        color = "black",
+        weight = 0.8,
+        smoothFactor = 1.5
+      ) %>%
+      addLegend("bottomright",
+                colors = c("red"),
+                labels = c("No-Go"),
+                title = "Legend",
+                opacity = 0.6
+      ) %>%
+      # leafem::addLogo(img = "data_input/ewt_01.png",
+      #                 src = "local",
+      #                 url = "https://www.ewt.org.za/",
+      #                 position = "topleft",
+      #                 offset.x = 50,
+      #                 width = 60) %>%
+      addResetMapButton() %>%
+      leafem::addMouseCoordinates() %>%
+      addDrawToolbar(polylineOptions = FALSE,
+                     polygonOptions = drawPolygonOptions(
+                       shapeOptions = drawShapeOptions(color = "orange", fillColor = "orange")
+                     ),
+                     rectangleOptions = drawRectangleOptions(
+                       shapeOptions = drawShapeOptions(color = "orange", fillColor = "orange")
+                     ),
+                     markerOptions = FALSE,
+                     circleMarkerOptions = FALSE,
+                     circleOptions = FALSE,
+                     editOptions = editToolbarOptions())
+
   })
 
-  ## Show download button ----
-  # Note - map name (e.g., nogomap) is the first part of "_draw_new_feature"
-  observeEvent(input$nogomap_draw_new_feature, {
-    shinyjs::show("downloaddiv")
+  ## Add cadastral data -----
+  observeEvent(input$add_cadastral, {
+
+    leafletProxy("nogomap") %>%
+      clearControls() %>%
+      addLayersControl(
+        baseGroups = c("Topographic",
+                       "Streets",
+                       "Imagery"
+        ),
+        overlayGroups= c("No-go areas","Protected areas","Farm portions","ERFs"),
+        options = layersControlOptions(collapsed=FALSE)
+      ) %>%
+
+      clearGroup("No-go areas") %>%
+      addMapPane("farm_polys", zIndex = 410) %>% # Farms will plot beneath no-go polys
+      addMapPane("erf_polys", zIndex = 415) %>%
+      addMapPane("nogo_polys", zIndex = 420) %>% # No-go polys will plot above farms
+      addPolygons(
+        data = farms,
+        group = "Farm portions",
+        popup =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
+        label =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
+        fillColor = "blue",
+        fillOpacity = 0.4,
+        stroke = TRUE,
+        color = "black",
+        weight = 0.8,
+        smoothFactor = 3,
+        options = pathOptions(pane = "farm_polys")
+      ) %>%
+      addPolygons(
+        data = erf,
+        group = "ERFs",
+        popup =  "ERF property (click for details)",
+        # popup =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
+        # label =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
+        fillColor = "yellow",
+        fillOpacity = 0.4,
+        stroke = TRUE,
+        color = "black",
+        weight = 0.8,
+        smoothFactor = 3,
+        options = pathOptions(pane = "erf_polys")
+      ) %>%
+      addPolygons(
+        data = pa,
+        group = "Protected areas",
+        popup = ~ CUR_NME,
+        fillColor = "lime",
+        fillOpacity = 0.4,
+        stroke = TRUE,
+        color = "black",
+        weight = 0.8,
+        smoothFactor = 2
+      ) %>%
+      addPolygons(
+        data = high_sens_uni,
+        group = "No-go areas",
+        popup = "NO-GO AREA",
+        label = "NoGO",
+        fillColor = "red",
+        fillOpacity = 0.75,
+        stroke = TRUE,
+        color = "black",
+        weight = 0.8,
+        smoothFactor = 1.5,
+        options = pathOptions(pane = "nogo_polys")
+      ) %>%
+      addLegend("bottomright",
+                colors = c("red","lime","blue","yellow"),
+                labels = c("No-Go","PA","Farm portion","ERF"),
+                title = "Legend",
+                opacity = 0.6
+      )
+
   })
-
-  ## Download user drawn shapes ----
-  output$downloadData <- downloadHandler(
-    filename = function() {
-      paste("shapefile", "zip", sep=".")
-    },
-    content = function(file) {
-      temp_shp <- tempdir()
-      geo = input$nogomap_draw_new_feature$geometry$coordinates[[1]]
-      lng = map_dbl(geo, `[[`, 1)
-      lat = map_dbl(geo, `[[`, 2)
-      shp = st_as_sf(tibble(lon = lng, lat = lat),
-                     coords = c("lon", "lat"),
-                     crs = 4326) %>%
-        summarise(geometry = st_combine(geometry)) %>%
-        st_cast("POLYGON")
-
-      shp_files <- list.files(temp_shp, "shapefile*",
-                              full.names = TRUE)
-      if(length(shp_files) != 0) {
-        file.remove(shp_files)
-      }
-      st_write(shp, paste(temp_shp, "shapefile.shp", sep = "\\"))
-      # copy the zip file to the file argument
-      shp_files <- list.files(temp_shp, "shapefile*",
-                              full.names = TRUE)
-      zip(zipfile = file, files = shp_files, flags = "-j")
-      file.remove(shp_files)
-    }
-  )
 
   ## Reset map to original state ----
   observeEvent(input$map_reset,{
@@ -245,15 +182,17 @@ server <- function(input, output, session) {
         overlayGroups= c("No-go areas","Protected areas","Farm portions","ERFs"),
         options = layersControlOptions(collapsed=FALSE)
       ) %>%
-      hideGroup("Farm portions")
+      hideGroup("Farm portions") %>%
+      hideGroup("ERFs") %>%
+      hideGroup("Protected areas")
 
-      # NOT WORKING:
-      # removeDrawToolbar(clearFeatures=TRUE) #%>%
-      # addDrawToolbar(polylineOptions = FALSE,
-      #                markerOptions = FALSE,
-      #                circleMarkerOptions = FALSE,
-      #                circleOptions = FALSE,
-      #                editOptions = editToolbarOptions())
+    # NOT WORKING:
+    # removeDrawToolbar(clearFeatures=TRUE) #%>%
+    # addDrawToolbar(polylineOptions = FALSE,
+    #                markerOptions = FALSE,
+    #                circleMarkerOptions = FALSE,
+    #                circleOptions = FALSE,
+    #                editOptions = editToolbarOptions())
 
     ## Reset input boxes
     updateTextInput(session, "sgcode", label = "Enter 21 digit SG code", value = "")
@@ -331,7 +270,7 @@ server <- function(input, output, session) {
   })
 
 
-  ## Add user point ----
+  ## Plot user point ----
 
   # Farm
   "-33.7"
@@ -340,7 +279,7 @@ server <- function(input, output, session) {
   "-30.375"
   "30.6858"
 
-   user_point <- reactive({
+  user_point <- reactive({
     st_sfc(st_point(c(input$long,input$lat)),
            crs = latlongCRS)
   })
@@ -379,7 +318,7 @@ server <- function(input, output, session) {
       prop_extract <- erf_all[ref,]
     }
 
-  return(prop_extract)
+    return(prop_extract)
 
   })
 
@@ -426,6 +365,45 @@ server <- function(input, output, session) {
   })
 
 
+  ## DOWNLOADS ----
+
+  ## Show download button ----
+  # Note - map name (e.g., nogomap) is the first part of "_draw_new_feature"
+  observeEvent(input$nogomap_draw_new_feature, {
+    shinyjs::show("downloaddiv")
+  })
+
+  ## Download user drawn shapes ----
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      paste("shapefile", "zip", sep=".")
+    },
+    content = function(file) {
+      temp_shp <- tempdir()
+      geo = input$nogomap_draw_new_feature$geometry$coordinates[[1]]
+      lng = map_dbl(geo, `[[`, 1)
+      lat = map_dbl(geo, `[[`, 2)
+      shp = st_as_sf(tibble(lon = lng, lat = lat),
+                     coords = c("lon", "lat"),
+                     crs = 4326) %>%
+        summarise(geometry = st_combine(geometry)) %>%
+        st_cast("POLYGON")
+
+      shp_files <- list.files(temp_shp, "shapefile*",
+                              full.names = TRUE)
+      if(length(shp_files) != 0) {
+        file.remove(shp_files)
+      }
+      st_write(shp, paste(temp_shp, "shapefile.shp", sep = "\\"))
+      # copy the zip file to the file argument
+      shp_files <- list.files(temp_shp, "shapefile*",
+                              full.names = TRUE)
+      zip(zipfile = file, files = shp_files, flags = "-j")
+      file.remove(shp_files)
+    }
+  )
+  ## GEOMETRY INTERSECTIONS ----
+
   ## Intersect hand drawn polygon and high sensitivity layer ----
 
   # Create holder for reactive value
@@ -438,7 +416,7 @@ server <- function(input, output, session) {
     shp_value$poly_shp = input$nogomap_draw_new_feature$geometry$coordinates[[1]]
   })
 
-   sens_df_hand <- reactive({
+  sens_df_hand <- reactive({
 
     # Use reactive value
     req(shp_value)
@@ -446,8 +424,8 @@ server <- function(input, output, session) {
     lng <- map_dbl(geo, `[[`, 1)
     lat <- map_dbl(geo, `[[`, 2)
     shp <- st_as_sf(tibble(lon = lng, lat = lat),
-                   coords = c("lon", "lat"),
-                   crs = 4326) %>%
+                    coords = c("lon", "lat"),
+                    crs = 4326) %>%
       summarise(geometry = st_combine(geometry)) %>%
       st_cast("POLYGON")
 
@@ -534,9 +512,9 @@ server <- function(input, output, session) {
         tally() %>%
         rename(Species = SENSFEA, NoGo_count = n)
       df
-      }
+    }
 
-    })
+  })
 
   ## Intersect hand drawn polygon and farm/erf layer ----
   prop_df_hand <- reactive({
@@ -640,7 +618,6 @@ server <- function(input, output, session) {
   })
 
   ## Intersect point and farm/erf layer ----
-
   prop_df_point <- reactive({
 
     req(user_point())
@@ -686,41 +663,75 @@ server <- function(input, output, session) {
 
   })
 
+  ## DT OPTIONS ----
+  # See help for DT setup: https://rstudio.github.io/DT/options.html
+  #                        https://shiny.rstudio.com/articles/datatables.html
+
+  dt_options <- list(
+    deferRender = TRUE,
+    scrollY = 400,
+    scrollX = TRUE,
+    scroller = TRUE,
+    autoWidth = FALSE,
+    # columnDefs = list(list(width = '5px', targets = c(1,2,3))), # Causes error with filtering
+    dom = "Bfrtip", # Order in which DT components are added
+    # dom = "lBtip",
+    buttons = list("copy", "print", list(
+      extend = "collection",
+      buttons = c("csv", "excel", "pdf"),
+      text = "Download")
+    )
+  )
+
+  dt_button_options <- list(
+    dom = "Bfrtip", # Order in which DT components are added
+  # dom = "lBtip",
+  buttons = list("copy", "print", list(
+    extend = "collection",
+    buttons = c("csv", "excel", "pdf"),
+    text = "Download")
+    )
+  )
+
+
+  ## TABLES SENSITIVTY -----
+
   ## Create sensitivity user polygon data table ----
   output$sens_feat_table_user <- renderDataTable(
-    sens_df_user() # NEED TO MERGE THESE TWO FUNCTIONS
+    sens_df_user(), # NEED TO MERGE THESE TWO FUNCTIONS
+    extensions = "Buttons",
+    options = dt_button_options
   )
 
   ## Create sensitivity point data table ----
   output$sens_feat_table_point <- DT::renderDataTable(
-    sens_df_point()
+    sens_df_point(),
+    extensions = "Buttons",
+    options = dt_button_options
   )
 
   ## Create sensitivity SG data table ----
   output$sens_feat_table_sg <- DT::renderDataTable(
-    sens_df_sg()
+    sens_df_sg(),
+    extensions = "Buttons",
+    options = dt_button_options
   )
 
   ## Create sensitivity hand data table ----
   output$sens_feat_table_hand <- DT::renderDataTable(
-    sens_df_hand()
+    sens_df_hand(),
+    extensions = "Buttons",
+    options = dt_button_options
   )
+
+  ## TABLES PROPERTIES -----
 
   ## Create user polygon property data table ----
-
-  # See help for DT setup: https://rstudio.github.io/DT/options.html
-  #                        https://shiny.rstudio.com/articles/datatables.html
   output$property_table_user <- DT::renderDataTable(
     prop_df_user(),
-    options = list(
-      deferRender = TRUE,
-      scrollY = 400,
-      scrollX = TRUE,
-      scroller = TRUE,
-      autoWidth = FALSE,
-      columnDefs = list(list(width = '5px', targets = c(1,2,3)))
+    extensions = "Buttons",
+    options = dt_options
     )
-  )
 
   ## Create SG code property data table ----
   output$property_table_sg <- renderDataTable({
@@ -742,42 +753,23 @@ server <- function(input, output, session) {
       pivot_wider(names_from = prop,
                   values_from = value)
     farm_df
-  })
+  },
+  extensions = "Buttons",
+  options = dt_options)
 
   ## Create point property data table ----
   output$property_table_point <- renderDataTable(
-  prop_df_point(),
-  extensions = "Buttons",
-  options = list(
-    dom = "Bfrtip",
-    buttons =
-      list("copy", "print", list(
-        extend = "collection",
-        buttons = c("csv", "excel", "pdf"),
-        text = "Download"
-      ))
+    prop_df_point(),
+    extensions = "Buttons",
+    options = dt_options
   )
-)
 
-   ## Create hand polygon property data table ----
-   output$property_table_hand <- renderDataTable(
-     prop_df_hand()
-   )
+  ## Create hand polygon property data table ----
+  output$property_table_hand <- renderDataTable(
+    prop_df_hand(),
+    extensions = "Buttons",
+    options = dt_options
+  )
 
 }
 
-
-# Run the app -------------------------------------------------------------
-shinyApp(ui = ui, server = server)
-
-
-## Footnotes ----
-
-# See https://shiny.rstudio.com/gallery/superzip-example.html
-# Read in shapefile https://gist.github.com/RCura/9587685
-
-# Good guide
-# https://www.paulamoraga.com/book-geospatial/sec-shinyexample.html
-
-## Reactivity
-# https://stackoverflow.com/questions/53016404/advantages-of-reactive-vs-observe-vs-observeevent
