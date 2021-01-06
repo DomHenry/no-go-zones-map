@@ -75,14 +75,16 @@ body <- dashboardBody(
             fileInput("user_shape", "Upload shapefile",
                       multiple = TRUE,
                       accept = c(
-                        # ".csv", ".kml", ".zip",
+                        # ".csv",
+                        ".kml",
+                        # ".zip",
                         ".shx", ".shp", ".sbn", ".sbx",
                         ".dbf", ".prj"
                       )
             ),
             actionButton("plot_footprint", "Plot shapefile", style = blue_button),
             tags$hr(),
-            textInput("sgcode", "Enter 21 digit SG code", "K436N0FS000000016416000001"),
+            textInput("sgcode", "Enter 21 digit SG code", "K272N0HV000000017445000000"),
             actionButton("search_prop", "Search property", style = blue_button),
             br(),
             tags$hr(),
