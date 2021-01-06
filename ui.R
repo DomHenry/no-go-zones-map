@@ -42,7 +42,10 @@ sidebar <- dashboardSidebar(
   sidebarMenu(
     menuItem("Welcome", tabName = "welcome"),
     menuItem("Interactive map", tabName = "int_map"),
-    menuItem("Data output", tabName = "data_output"),
+    menuItem("Data output: Shapefile or KML", tabName = "data_output_01"),
+    menuItem("Data output: SG code", tabName = "data_output_02"),
+    menuItem("Data output: Lat/Long point", tabName = "data_output_03"),
+    menuItem("Data output: Hand-drawn polygon", tabName = "data_output_04"),
     menuItem("Help", tabName = "help")
   )
 )
@@ -130,56 +133,69 @@ body <- dashboardBody(
     ),
 
     tabItem(
-      tabName = "data_output",
+      tabName = "data_output_01",
       fluidRow(
         box(
-          title = "Sensitive species - user polygon",
+          title = "Species data - shapefile or KML",
           width = 4, solidHeader = TRUE, status = "primary",
           dataTableOutput("sens_feat_table_user")
         ),
         box(
-          title = "Property details - user polygon",
+          title = "Farm/ERF property data - shapefile or KML",
           width = 8, solidHeader = TRUE, status = "primary",
           dataTableOutput("property_table_user")
         )
-      ),
+      )
+    ),
+
+    tabItem(
+      tabName = "data_output_02",
       fluidRow(
         box(
-          title = "Sensitive species - SG code",
+          title = "Species data - SG code",
           width = 4, solidHeader = TRUE, status = "success",
           dataTableOutput("sens_feat_table_sg")
         ),
         box(
-          title = "Property details - SG code",
+          title = "Farm/ERF property data - SG code",
           width = 8, solidHeader = TRUE, status = "success",
           dataTableOutput("property_table_sg")
         )
-      ),
+      )
+    ),
+
+    tabItem(
+      tabName = "data_output_03",
       fluidRow(
         box(
-          title = "Sensitive species - user point",
+          title = "Species data - Lat/Long point",
           width = 4, solidHeader = TRUE, status = "warning",
           dataTableOutput("sens_feat_table_point")
         ),
         box(
-          title = "Property details - user point",
+          title = "Farm/ERF property data - Lat/Long point",
           width = 8, solidHeader = TRUE, status = "warning",
           dataTableOutput("property_table_point")
         )
-      ),
+      )
+    ),
+
+    tabItem(
+      tabName = "data_output_04",
       fluidRow(
         box(
-          title = "Sensitive species - user hand drawn",
+          title = "Species data - hand drawn polygon",
           width = 4, solidHeader = TRUE, status = "danger",
           dataTableOutput("sens_feat_table_hand")
         ),
         box(
-          title = "Property details - user hand drawn",
+          title = "Farm/ERF property data - hand drawn polygon",
           width = 8, solidHeader = TRUE, status = "danger",
           dataTableOutput("property_table_hand")
         )
       )
     ),
+
 
     tabItem(
       tabName = "help",
