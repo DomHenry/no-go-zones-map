@@ -9,7 +9,7 @@ server <- function(input, output, session) {
 
   ## GEOMETRY PLOTTING ----
 
-  ## Plot base map ----
+  ### Plot base map ----
   output$nogomap <- renderLeaflet({
 
     leaflet() %>%
@@ -43,10 +43,13 @@ server <- function(input, output, session) {
               lat = -29.1707702,
               zoom = 6) %>%
       addPolygons(
-        data = high_sens_uni,
-        group = "No-go areas",
-        popup = "NO-GO AREA",
+        # data = high_sens_uni,
+        # popup = "NO-GO AREA",
+        # label = "NoGO",
+        data = high_sens_all,
+        popup = ~ scntfc_,
         label = "NoGO",
+        group = "No-go areas",
         fillColor = "red",
         fillOpacity = 0.75,
         stroke = TRUE,
@@ -82,7 +85,7 @@ server <- function(input, output, session) {
 
   })
 
-  ## Add cadastral data -----
+  ### Add cadastral data -----
   observeEvent(input$add_cadastral, {
 
     leafletProxy("nogomap") %>%
@@ -114,11 +117,12 @@ server <- function(input, output, session) {
         options = pathOptions(pane = "farm_polys")
       ) %>%
       addPolygons(
-        data = erf,
+        # data = erf,
+        # popup =  "ERF property (click for details)",
+        data = erf_all,
+        popup =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
+        label =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
         group = "ERFs",
-        popup =  "ERF property (click for details)",
-        # popup =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
-        # label =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
         fillColor = "yellow",
         fillOpacity = 0.4,
         stroke = TRUE,
@@ -130,7 +134,7 @@ server <- function(input, output, session) {
       addPolygons(
         data = pa,
         group = "Protected areas",
-        popup = ~ CUR_NME,
+        popup = ~ cur_nme,
         fillColor = "lime",
         fillOpacity = 0.4,
         stroke = TRUE,
@@ -139,10 +143,13 @@ server <- function(input, output, session) {
         smoothFactor = 2
       ) %>%
       addPolygons(
-        data = high_sens_uni,
-        group = "No-go areas",
-        popup = "NO-GO AREA",
+        # data = high_sens_uni,
+        # popup = "NO-GO AREA",
+        # label = "NoGO",
+        data = high_sens_all,
+        popup = ~ scntfc_,
         label = "NoGO",
+        group = "No-go areas",
         fillColor = "red",
         fillOpacity = 0.75,
         stroke = TRUE,
@@ -160,7 +167,7 @@ server <- function(input, output, session) {
 
   })
 
-  ## Reset map to original state ----
+  ### Reset map to original state ----
   observeEvent(input$map_reset,{
 
     leafletProxy("nogomap") %>%
@@ -203,33 +210,48 @@ server <- function(input, output, session) {
 
   })
 
-  ## Upload and extract user polygon ----
+
+  ### Upload and extract user polygon (either KML or SHAPEFILE) ----
   user_polygon <- reactive({
 
     req(input$user_shape)
-
     shpdf <- input$user_shape
-    tempdirname <- dirname(shpdf$datapath[1])
 
-    for (i in 1:nrow(shpdf)) {
-      file.rename(
-        shpdf$datapath[i],
-        paste0(tempdirname, "/", shpdf$name[i])
-      )
+    if(nrow(shpdf) == 1){
+
+      poly <- st_read(shpdf$datapath)
+      poly <- poly %>%
+        st_transform(crs = latlongCRS)
+      st_crs(poly) <- latlongCRS
+
+      return(poly)
+
+    } else if (nrow(shpdf) > 1){
+
+      tempdirname <- dirname(shpdf$datapath[1])
+
+      for (i in 1:nrow(shpdf)) {
+        file.rename(
+          shpdf$datapath[i],
+          paste0(tempdirname, "/", shpdf$name[i])
+        )
+      }
+      poly <- st_read(paste(tempdirname,
+                            shpdf$name[grep(pattern = "*.shp$", shpdf$name)],
+                            sep = "/"
+      ))
+
+      poly <- poly %>%
+        st_transform(crs = latlongCRS)
+
+      st_crs(poly) <- latlongCRS
+      return(poly)
+
     }
-    poly <- st_read(paste(tempdirname,
-                          shpdf$name[grep(pattern = "*.shp$", shpdf$name)],
-                          sep = "/"
-    ))
 
-    poly <- poly %>%
-      st_transform(crs = latlongCRS)
-
-    st_crs(poly) <- latlongCRS
-    poly
   })
 
-  ##  Plot user input polygon ----
+  ###  Plot user input polygon ----
   observeEvent(input$plot_footprint,{
 
     cen <- sfc_as_cols(st_centroid(user_polygon())) %>%
@@ -270,7 +292,7 @@ server <- function(input, output, session) {
   })
 
 
-  ## Plot user point ----
+  ### Plot user point ----
 
   # Farm
   "-33.7"
@@ -297,13 +319,16 @@ server <- function(input, output, session) {
 
   })
 
-  ## Extract property from SG code ----
+  ### Extract property from SG code ----
   prop_extract <- reactive({
 
     req(input$sgcode)
 
-    "K436N0FS000000016416000001" # FARM
-    "K282N0GV042100011439000001" #ERF
+    # "K436N0FS000000016416000001" # FARM
+    # "K282N0GV042100011439000001" # ERF
+
+    "K272N0HV000000017445000000" # FARM
+    "W048C039000500001399000001" # ERF
 
     ref_farm <- which(farms$PRCL_KEY %in% input$sgcode)
     ref_erf <- which(erf_all$PRCL_KEY %in% input$sgcode)
@@ -322,7 +347,7 @@ server <- function(input, output, session) {
 
   })
 
-  ## Plot property from SG code ----
+  ### Plot property from SG code ----
   observeEvent(input$search_prop,{
 
     req(prop_extract()) # Won't plot if prop_extract() is NULL
@@ -367,13 +392,13 @@ server <- function(input, output, session) {
 
   ## DOWNLOADS ----
 
-  ## Show download button ----
+  ### Show download button ----
   # Note - map name (e.g., nogomap) is the first part of "_draw_new_feature"
   observeEvent(input$nogomap_draw_new_feature, {
     shinyjs::show("downloaddiv")
   })
 
-  ## Download user drawn shapes ----
+  ### Download user drawn shapes ----
   output$downloadData <- downloadHandler(
     filename = function() {
       paste("shapefile", "zip", sep=".")
@@ -404,7 +429,7 @@ server <- function(input, output, session) {
   )
   ## GEOMETRY INTERSECTIONS ----
 
-  ## Intersect hand drawn polygon and high sensitivity layer ----
+  ### Intersect hand drawn polygon and high sensitivity layer ----
 
   # Create holder for reactive value
   shp_value <- reactiveValues(
@@ -441,7 +466,7 @@ server <- function(input, output, session) {
 
   })
 
-  ## Intersect user polygon and high sensitivity layer ----
+  ### Intersect user polygon and high sensitivity layer ----
   sens_df_user <- reactive({
 
     req(input$user_shape)
@@ -458,7 +483,7 @@ server <- function(input, output, session) {
 
   })
 
-  ## Intersect SG code property and high sensitivity layer ----
+  ### Intersect SG code property and high sensitivity layer ----
   sens_df_sg <- reactive({
 
     req(prop_extract())
@@ -475,7 +500,7 @@ server <- function(input, output, session) {
 
   })
 
-  # Intersect user point and high sensitivity layer ----
+  ### Intersect user point and high sensitivity layer ----
 
   sens_df_point <- reactive({
 
@@ -516,7 +541,7 @@ server <- function(input, output, session) {
 
   })
 
-  ## Intersect hand drawn polygon and farm/erf layer ----
+  ### Intersect hand drawn polygon and farm/erf layer ----
   prop_df_hand <- reactive({
 
     req(shp_value)
@@ -572,7 +597,7 @@ server <- function(input, output, session) {
 
   })
 
-  ## Intersect polygon and farm/erf layer ----
+  ### Intersect polygon and farm/erf layer ----
   prop_df_user <- reactive({
 
     req(input$user_shape)
@@ -617,7 +642,7 @@ server <- function(input, output, session) {
 
   })
 
-  ## Intersect point and farm/erf layer ----
+  ### Intersect point and farm/erf layer ----
   prop_df_point <- reactive({
 
     req(user_point())
@@ -696,28 +721,28 @@ server <- function(input, output, session) {
 
   ## TABLES SENSITIVTY -----
 
-  ## Create sensitivity user polygon data table ----
+  ### Create sensitivity user polygon data table ----
   output$sens_feat_table_user <- renderDataTable(
     sens_df_user(), # NEED TO MERGE THESE TWO FUNCTIONS
     extensions = "Buttons",
     options = dt_button_options
   )
 
-  ## Create sensitivity point data table ----
+  ### Create sensitivity point data table ----
   output$sens_feat_table_point <- DT::renderDataTable(
     sens_df_point(),
     extensions = "Buttons",
     options = dt_button_options
   )
 
-  ## Create sensitivity SG data table ----
+  ### Create sensitivity SG data table ----
   output$sens_feat_table_sg <- DT::renderDataTable(
     sens_df_sg(),
     extensions = "Buttons",
     options = dt_button_options
   )
 
-  ## Create sensitivity hand data table ----
+  ### Create sensitivity hand data table ----
   output$sens_feat_table_hand <- DT::renderDataTable(
     sens_df_hand(),
     extensions = "Buttons",
@@ -726,14 +751,14 @@ server <- function(input, output, session) {
 
   ## TABLES PROPERTIES -----
 
-  ## Create user polygon property data table ----
+  ### Create user polygon property data table ----
   output$property_table_user <- DT::renderDataTable(
     prop_df_user(),
     extensions = "Buttons",
     options = dt_options
     )
 
-  ## Create SG code property data table ----
+  ### Create SG code property data table ----
   output$property_table_sg <- renderDataTable({
 
     req(prop_extract())
@@ -757,14 +782,14 @@ server <- function(input, output, session) {
   extensions = "Buttons",
   options = dt_options)
 
-  ## Create point property data table ----
+  ### Create point property data table ----
   output$property_table_point <- renderDataTable(
     prop_df_point(),
     extensions = "Buttons",
     options = dt_options
   )
 
-  ## Create hand polygon property data table ----
+  ### Create hand polygon property data table ----
   output$property_table_hand <- renderDataTable(
     prop_df_hand(),
     extensions = "Buttons",
