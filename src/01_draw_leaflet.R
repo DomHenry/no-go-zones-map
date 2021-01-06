@@ -93,11 +93,12 @@ nogo_basemap <- nogo_basemap %>%
 # ERFs --------------------------------------------------------------------
 nogo_basemap <- nogo_basemap %>%
   addPolygons(
-    data = erf,
+    # data = erf,
+    # popup =  "ERF property (click for details)",
+    data = erf_all,
+    popup =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
+    label =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
     group = "ERFs",
-    popup =  "ERF property (click for details)",
-    # popup =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
-    # label =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
     fillColor = "yellow",
     fillOpacity = 0.4,
     stroke = TRUE,
@@ -113,7 +114,7 @@ nogo_basemap <- nogo_basemap %>%
   addPolygons(
     data = pa,
     group = "Protected areas",
-    popup = ~ CUR_NME,
+    popup = ~ cur_nme,
     fillColor = "lime",
     fillOpacity = 0.4,
     stroke = TRUE,
