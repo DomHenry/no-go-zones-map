@@ -2,6 +2,7 @@ library(shiny)
 
 # Load data ---------------------------------------------------------------
 load("data_input/spatial_data_inputs.RData")
+source("src/helper_functions.R")
 latlongCRS <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 ## Server ----
@@ -203,11 +204,10 @@ server <- function(input, output, session) {
 
     ## Reset input boxes
     updateTextInput(session, "sgcode", label = "Enter 21 digit SG code", value = "")
-    updateNumericInput(session, "lat", "Latitude", value = 0)
-    updateNumericInput(session, "long", "Longitude", value = 0)
+    updateNumericInput(session, "lat", "Latitude", value = NA)
+    updateNumericInput(session, "long", "Longitude", value = NA)
     shinyjs::reset("user_shape") # Doesn't remove underlying data (only text in widget)
     shp_value$poly_shp <- NULL
-
   })
 
 
@@ -217,17 +217,19 @@ server <- function(input, output, session) {
     req(input$user_shape)
     shpdf <- input$user_shape
 
-    if(nrow(shpdf) == 1){
+    shp_needed <- c("shp","shx","dbf","prj")
+    shp_ext <- tools::file_ext(shpdf$datapath)
+
+    if(str_detect(shpdf$datapath[1], ".kml")){
 
       poly <- st_read(shpdf$datapath)
       poly <- poly %>%
         st_transform(crs = latlongCRS)
       st_crs(poly) <- latlongCRS
-
       return(poly)
 
-    } else if (nrow(shpdf) > 1){
-
+    } else if (all(shp_needed %in% shp_ext)){
+      print("import valid shapefile")
       tempdirname <- dirname(shpdf$datapath[1])
 
       for (i in 1:nrow(shpdf)) {
@@ -238,57 +240,110 @@ server <- function(input, output, session) {
       }
       poly <- st_read(paste(tempdirname,
                             shpdf$name[grep(pattern = "*.shp$", shpdf$name)],
-                            sep = "/"
-      ))
+                            sep = "/"))
 
       poly <- poly %>%
         st_transform(crs = latlongCRS)
-
       st_crs(poly) <- latlongCRS
       return(poly)
 
+    } else {
+      print("return NULL")
+      poly <- NULL
     }
+
+    # if(nrow(shpdf) == 1){ # this really should be if datapath has contains ".kml"
+    #
+    #   poly <- st_read(shpdf$datapath)
+    #   poly <- poly %>%
+    #     st_transform(crs = latlongCRS)
+    #   st_crs(poly) <- latlongCRS
+    #   return(poly)
+    #
+    #   } else if (nrow(shpdf) == 2){
+    #
+    #     poly <- NULL
+    #     return(NULL)
+    #
+    #   } else if (nrow(shpdf) > 2){
+    #
+    #   tempdirname <- dirname(shpdf$datapath[1])
+    #
+    #   for (i in 1:nrow(shpdf)) {
+    #     file.rename(
+    #       shpdf$datapath[i],
+    #       paste0(tempdirname, "/", shpdf$name[i])
+    #     )
+    #   }
+    #   poly <- st_read(paste(tempdirname,
+    #                         shpdf$name[grep(pattern = "*.shp$", shpdf$name)],
+    #                         sep = "/"
+    #   ))
+    #
+    #   # Catch error of user doesn't upload prj file
+    #   st_try <- try({
+    #     poly %>%
+    #       st_transform(crs = latlongCRS)
+    #   })
+    #
+    #   if(inherits(st_try, "try-error")){
+    #     st_crs(poly) <- latlongCRS
+    #     poly <- poly %>%
+    #       st_transform(crs = latlongCRS)
+    #
+    #   } else {
+    #     poly <- poly %>%
+    #       st_transform(crs = latlongCRS)
+    #     st_crs(poly) <- latlongCRS
+    #
+    #     }
+    #
+    #   return(poly)
+    #
+    # }
 
   })
 
   ###  Plot user input polygon ----
   observeEvent(input$plot_footprint,{
 
-    cen <- sfc_as_cols(st_centroid(user_polygon())) %>%
+    if(!is.null(user_polygon())){
+
+      cen <- sfc_as_cols(st_centroid(user_polygon())) %>%
       st_drop_geometry()
 
-    leafletProxy("nogomap") %>%
-      addPolygons(
-        data = user_polygon(),
-        group = "User shapefile",
-        popup = "User shapefile",
-        fillColor = "purple",
-        fillOpacity = 0.4,
-        stroke = TRUE,
-        color = "black",
-        weight = 0.8,
-        smoothFactor = 2
-      ) %>%
-      setView(
-        lng = cen$x,
-        lat = cen$y,
-        zoom = 11
-      )  %>%
-      removeLayersControl() %>%
-      addLayersControl(
-        baseGroups = c("Topographic", "Streets","Imagery"),
-        overlayGroups= c("No-go areas","Protected areas","Farm portions","ERFs", "User shapefile"),
-        options = layersControlOptions(collapsed=FALSE)
-      ) %>%
-      showGroup("Farm portions") %>%
-      clearControls() %>%
-      addLegend("bottomright",
-                colors = c("red","lime","blue","yellow","purple"),
-                labels = c("No-Go","PA","Farm portion","ERF","User shapefile"),
-                title = "Legend",
-                opacity = 0.6
-      )
-
+      leafletProxy("nogomap") %>%
+        addPolygons(
+          data = user_polygon(),
+          group = "User shapefile",
+          popup = "User shapefile",
+          fillColor = "purple",
+          fillOpacity = 0.4,
+          stroke = TRUE,
+          color = "black",
+          weight = 0.8,
+          smoothFactor = 2
+        ) %>%
+        setView(
+          lng = cen$x,
+          lat = cen$y,
+          zoom = 11
+        )  %>%
+        removeLayersControl() %>%
+        addLayersControl(
+          baseGroups = c("Topographic", "Streets","Imagery"),
+          overlayGroups= c("No-go areas","Protected areas","Farm portions","ERFs", "User shapefile"),
+          options = layersControlOptions(collapsed=FALSE)
+        ) %>%
+        showGroup("Farm portions") %>%
+        clearControls() %>%
+        addLegend("bottomright",
+                  colors = c("red","lime","blue","yellow","purple"),
+                  labels = c("No-Go","PA","Farm portion","ERF","User shapefile"),
+                  title = "Legend",
+                  opacity = 0.6
+        )
+        }
   })
 
 
@@ -302,6 +357,12 @@ server <- function(input, output, session) {
   "30.6858"
 
   user_point <- reactive({
+
+    validate(
+      need(is.numeric(input$long) & is.numeric(input$lat),
+           "Please enter a valid latitude and longitude")
+    )
+
     st_sfc(st_point(c(input$long,input$lat)),
            crs = latlongCRS)
   })
@@ -390,7 +451,7 @@ server <- function(input, output, session) {
   })
 
 
-  ## DOWNLOADS ----
+  ## POLYGON DOWNLOADS ----
 
   ### Show download button ----
   # Note - map name (e.g., nogomap) is the first part of "_draw_new_feature"
@@ -427,9 +488,10 @@ server <- function(input, output, session) {
       file.remove(shp_files)
     }
   )
+
   ## GEOMETRY INTERSECTIONS ----
 
-  ### Intersect hand drawn polygon and high sensitivity layer ----
+  ### Hand drawn polygon and EST layer ----
 
   # Create holder for reactive value
   shp_value <- reactiveValues(
@@ -445,7 +507,13 @@ server <- function(input, output, session) {
 
     # Use reactive value
     req(shp_value)
+
     geo <- shp_value$poly_shp
+
+    validate(
+      need(!is.null(geo), "Please draw polygon on map first")
+    )
+
     lng <- map_dbl(geo, `[[`, 1)
     lat <- map_dbl(geo, `[[`, 2)
     shp <- st_as_sf(tibble(lon = lng, lat = lat),
@@ -455,52 +523,40 @@ server <- function(input, output, session) {
       st_cast("POLYGON")
 
     nogo_user_int <- st_intersection(shp, high_sens_all)
-
-    df <- nogo_user_int %>%
-      st_drop_geometry() %>%
-      group_by(SENSFEA) %>%
-      tally() %>%
-      rename(Species = SENSFEA, NoGo_count = n)
-
-    df
+    df <- compile_species_table(nogo_user_int)
+    df <- draw_gt(df)
+    return(df)
 
   })
 
-  ### Intersect user polygon and high sensitivity layer ----
+  ### User polygon and EST layer ----
   sens_df_user <- reactive({
 
     req(input$user_shape)
 
+    validate(
+      need(!is.null(user_polygon()), "Please upload valid shapefile files")
+    )
+
     nogo_user_int <- st_intersection(user_polygon(), high_sens_all)
-
-    df <- nogo_user_int %>%
-      st_drop_geometry() %>%
-      group_by(SENSFEA) %>%
-      tally() %>%
-      rename(Species = SENSFEA, NoGo_count = n)
-
-    df
+    df <- compile_species_table(nogo_user_int)
+    df <- draw_gt(df)
+    return(df)
 
   })
 
-  ### Intersect SG code property and high sensitivity layer ----
+  ### SG code property and EST layer ----
   sens_df_sg <- reactive({
 
     req(prop_extract())
 
     nogo_user_int <- st_intersection(prop_extract(), high_sens_all)
-
-    df <- nogo_user_int %>%
-      st_drop_geometry() %>%
-      group_by(SENSFEA) %>%
-      tally() %>%
-      rename(Species = SENSFEA, NoGo_count = n)
-
-    df
+    df <- compile_species_table(nogo_user_int)
+    df <- draw_gt(df)
 
   })
 
-  ### Intersect user point and high sensitivity layer ----
+  ### User point and EST layer ----
 
   sens_df_point <- reactive({
 
@@ -515,13 +571,8 @@ server <- function(input, output, session) {
         filter(PRCL_KEY == farm_int$PRCL_KEY)
 
       nogo_user_int <- st_intersection(farm_int, high_sens_all)
-
-      df <- nogo_user_int %>%
-        st_drop_geometry() %>%
-        group_by(SENSFEA) %>%
-        tally() %>%
-        rename(Species = SENSFEA, NoGo_count = n)
-      df
+      df <- compile_species_table(nogo_user_int)
+      df <- draw_gt(df)
 
 
     } else if (nrow(erf_int) > 0){
@@ -530,23 +581,23 @@ server <- function(input, output, session) {
         filter(PRCL_KEY == erf_int$PRCL_KEY)
 
       nogo_user_int <- st_intersection(erf_int, high_sens_all)
-
-      df <- nogo_user_int %>%
-        st_drop_geometry() %>%
-        group_by(SENSFEA) %>%
-        tally() %>%
-        rename(Species = SENSFEA, NoGo_count = n)
-      df
+      df <- compile_species_table(nogo_user_int)
+      df <- draw_gt(df)
     }
 
   })
 
-  ### Intersect hand drawn polygon and farm/erf layer ----
+  ### Hand drawn polygon and farm/erf layer ----
   prop_df_hand <- reactive({
 
     req(shp_value)
 
     geo <- shp_value$poly_shp
+
+    validate(
+      need(!is.null(geo), "Please draw polygon on map first")
+    )
+
     lng <- map_dbl(geo, `[[`, 1)
     lat <- map_dbl(geo, `[[`, 2)
     shp <- st_as_sf(tibble(lon = lng, lat = lat),
@@ -560,89 +611,41 @@ server <- function(input, output, session) {
 
 
     if (nrow(farm_int) > 0) {
-      farm_df <- farm_int %>%
-        st_drop_geometry() %>%
-        as_tibble() %>%
-        select(-GID) %>%
-        select(PRCL_KEY, PRCL_TYPE, ID, PROVINCE, MAJ_REGION, MAJ_CODE, PARCEL_NO, PORTION) %>%
-        mutate_all(as.character)
-
-      farm_df %>%
-        mutate(prop = str_c("property_", 1:nrow(.))) %>%
-        pivot_longer(cols =-prop,
-                     names_to = "Farm_field",
-                     values_to = "value") %>%
-        pivot_wider(names_from = prop,
-                    values_from = value)
+      df <- compile_property_table(farm_int,"Farm_field")
+      df <- draw_gt_property(df, Farm_field)
     } else if (nrow(erf_int) > 0){
-
-      erf_df <- erf_int %>%
-        st_drop_geometry() %>%
-        as_tibble() %>%
-        select(-GID) %>%
-        select(PRCL_KEY, PRCL_TYPE, ID, PROVINCE, MAJ_REGION, MAJ_CODE, PARCEL_NO, PORTION) %>%
-        mutate_all(as.character) %>%
-        mutate(prop = str_c("property_", 1:nrow(.)))
-
-      erf_df %>%
-        pivot_longer(cols =-prop,
-                     names_to = "ERF_field",
-                     values_to = "value") %>%
-        pivot_wider(names_from = prop,
-                    values_from = value)
-
-    }
-
-
+      df <- compile_property_table(erf_int,"ERF_field")
+      df <- draw_gt_property(df, ERF_field)
+     }
 
   })
 
-  ### Intersect polygon and farm/erf layer ----
+  ### User polygon and farm/erf layer ----
   prop_df_user <- reactive({
 
     req(input$user_shape)
+
+    validate(
+      need(!is.null(user_polygon()), "Please upload valid shapefile files")
+    )
+
     farm_int <- st_intersection(user_polygon(),farms)
     erf_int <- st_intersection(user_polygon(),erf_all)
 
     if (nrow(farm_int) > 0) {
-      farm_df <- farm_int %>%
-        st_drop_geometry() %>%
-        as_tibble() %>%
-        select(-GID) %>%
-        select(PRCL_KEY, PRCL_TYPE, ID, PROVINCE, MAJ_REGION, MAJ_CODE, PARCEL_NO, PORTION) %>%
-        mutate_all(as.character)
+      df <- compile_property_table(farm_int,"Farm_field")
+      df <- draw_gt_property(df, Farm_field)
 
-      farm_df %>%
-        mutate(prop = str_c("property_", 1:nrow(.))) %>%
-        pivot_longer(cols =-prop,
-                     names_to = "Farm_field",
-                     values_to = "value") %>%
-        pivot_wider(names_from = prop,
-                    values_from = value)
     } else if (nrow(erf_int) > 0){
-
-      erf_df <- erf_int %>%
-        st_drop_geometry() %>%
-        as_tibble() %>%
-        select(-GID) %>%
-        select(PRCL_KEY, PRCL_TYPE, ID, PROVINCE, MAJ_REGION, MAJ_CODE, PARCEL_NO, PORTION) %>%
-        mutate_all(as.character) %>%
-        mutate(prop = str_c("property_", 1:nrow(.)))
-
-      erf_df %>%
-        pivot_longer(cols =-prop,
-                     names_to = "ERF_field",
-                     values_to = "value") %>%
-        pivot_wider(names_from = prop,
-                    values_from = value)
+      df <- compile_property_table(erf_int,"ERF_field")
+      df <- draw_gt_property(df, ERF_field)
 
     }
 
 
-
   })
 
-  ### Intersect point and farm/erf layer ----
+  ### User point and farm/erf layer ----
   prop_df_point <- reactive({
 
     req(user_point())
@@ -651,150 +654,85 @@ server <- function(input, output, session) {
     erf_int <- st_intersection(erf_all, user_point())
 
     if (nrow(farm_int) > 0) {
-
-      farm_df <- farm_int %>%
-        st_drop_geometry() %>%
-        as_tibble() %>%
-        select(-GID) %>%
-        select(PRCL_KEY, PRCL_TYPE, ID, PROVINCE, MAJ_REGION, MAJ_CODE, PARCEL_NO, PORTION) %>%
-        mutate_all(as.character)
-
-      farm_df %>%
-        mutate(prop = str_c("property_", 1:nrow(.))) %>%
-        pivot_longer(cols =-prop,
-                     names_to = "Farm_field",
-                     values_to = "value") %>%
-        pivot_wider(names_from = prop,
-                    values_from = value)
-
+      df <- compile_property_table(farm_int,"Farm_field")
+      df <- draw_gt_property(df, Farm_field)
     } else if (nrow(erf_int) > 0) {
-
-      erf_df <- erf_int %>%
-        st_drop_geometry() %>%
-        as_tibble() %>%
-        select(-GID) %>%
-        select(PRCL_KEY, PRCL_TYPE, ID, PROVINCE, MAJ_REGION, MAJ_CODE, PARCEL_NO, PORTION) %>%
-        mutate_all(as.character) %>%
-        mutate(prop = str_c("property_", 1:nrow(.)))
-
-      erf_df %>%
-        pivot_longer(cols =-prop,
-                     names_to = "ERF_field",
-                     values_to = "value") %>%
-        pivot_wider(names_from = prop,
-                    values_from = value)
-
+      df <- compile_property_table(erf_int,"ERF_field")
+      df <- draw_gt_property(df, ERF_field)
     }
 
   })
 
-  ## DT OPTIONS ----
-  # See help for DT setup: https://rstudio.github.io/DT/options.html
-  #                        https://shiny.rstudio.com/articles/datatables.html
 
-  dt_options <- list(
-    deferRender = TRUE,
-    scrollY = 400,
-    scrollX = TRUE,
-    scroller = TRUE,
-    autoWidth = FALSE,
-    # columnDefs = list(list(width = '5px', targets = c(1,2,3))), # Causes error with filtering
-    dom = "Bfrtip", # Order in which DT components are added
-    # dom = "lBtip",
-    buttons = list("copy", "print", list(
-      extend = "collection",
-      buttons = c("csv", "excel", "pdf"),
-      text = "Download")
-    )
-  )
+  ## TABLES: SPECIES DATA -----
 
-  dt_button_options <- list(
-    dom = "Bfrtip", # Order in which DT components are added
-  # dom = "lBtip",
-  buttons = list("copy", "print", list(
-    extend = "collection",
-    buttons = c("csv", "excel", "pdf"),
-    text = "Download")
-    )
-  )
-
-
-  ## TABLES SENSITIVTY -----
+  table_width <- px(1200)
+  table_height <- px(400)
 
   ### Create sensitivity user polygon data table ----
-  output$sens_feat_table_user <- renderDataTable(
-    sens_df_user(), # NEED TO MERGE THESE TWO FUNCTIONS
-    extensions = "Buttons",
-    options = dt_button_options
+  output$sens_feat_table_user <- render_gt(
+      expr = sens_df_user(),
+      # width = table_width,
+      # height = table_height,
+      align = "left"
   )
 
   ### Create sensitivity point data table ----
-  output$sens_feat_table_point <- DT::renderDataTable(
+  output$sens_feat_table_point <-render_gt(
     sens_df_point(),
-    extensions = "Buttons",
-    options = dt_button_options
+    align = "left"
   )
 
   ### Create sensitivity SG data table ----
-  output$sens_feat_table_sg <- DT::renderDataTable(
-    sens_df_sg(),
-    extensions = "Buttons",
-    options = dt_button_options
+  output$sens_feat_table_sg <- render_gt(
+    expr = sens_df_sg(),
+    align = "left"
   )
 
   ### Create sensitivity hand data table ----
-  output$sens_feat_table_hand <- DT::renderDataTable(
-    sens_df_hand(),
-    extensions = "Buttons",
-    options = dt_button_options
+  output$sens_feat_table_hand <- render_gt(
+    expr = sens_df_hand(),
+    align = "left"
   )
 
-  ## TABLES PROPERTIES -----
+  ## TABLES: PROPERTY DATA -----
 
   ### Create user polygon property data table ----
-  output$property_table_user <- DT::renderDataTable(
-    prop_df_user(),
-    extensions = "Buttons",
-    options = dt_options
+  output$property_table_user <- render_gt(
+    expr = prop_df_user(),
+    align = "left"
     )
 
   ### Create SG code property data table ----
-  output$property_table_sg <- renderDataTable({
-
-    req(prop_extract())
-
-    farm_df <- prop_extract() %>%
-      st_drop_geometry() %>%
-      as_tibble() %>%
-      select(-GID) %>%
-      select(PRCL_KEY, PRCL_TYPE, ID, PROVINCE, MAJ_REGION, MAJ_CODE, PARCEL_NO, PORTION) %>%
-      mutate_all(as.character)
-
-    farm_df <- farm_df %>%
-      mutate(prop = str_c("property_", 1:nrow(.))) %>%
-      pivot_longer(cols =-prop,
-                   names_to = "Farm_field",
-                   values_to = "value") %>%
-      pivot_wider(names_from = prop,
-                  values_from = value)
-    farm_df
-  },
-  extensions = "Buttons",
-  options = dt_options)
+  output$property_table_sg <- render_gt(
+    expr = {
+      require(prop_extract())
+      df <- compile_property_table(prop_extract(), "Farm_field")
+      df <- draw_gt_property(df, prop_type = Farm_field)
+      },
+    align = "left"
+    )
 
   ### Create point property data table ----
-  output$property_table_point <- renderDataTable(
+  output$property_table_point <- render_gt(
     prop_df_point(),
-    extensions = "Buttons",
-    options = dt_options
+    align = "left"
   )
 
   ### Create hand polygon property data table ----
-  output$property_table_hand <- renderDataTable(
-    prop_df_hand(),
-    extensions = "Buttons",
-    options = dt_options
+  output$property_table_hand <- render_gt(
+    expr = prop_df_hand(),
+    align = "left"
   )
 
+  # DOWNLOADS ----
+  output$download_species <- downloadHandler(
+   filename = function() {
+      paste0(Sys.Date(), "species_data.csv")
+    },
+    content = function(file) {
+      write.csv(sens_df_point(), file, row.names = FALSE)
+    }
+  )
 }
 
