@@ -11,6 +11,7 @@ library(DT)
 library(leaflet.extras)
 library(leaflet.esri)
 library(leafem)
+library(gt)
 
 # Profiling ---------------------------------------------------------------
 
@@ -41,7 +42,7 @@ header <- dashboardHeader(
 sidebar <- dashboardSidebar(
   sidebarMenu(
     menuItem("Welcome", tabName = "welcome"),
-    menuItem("Interactive map", tabName = "int_map"),
+    menuItem("Interactive map", tabName = "int_map", selected = TRUE),
     menuItem("Data output: Shapefile or KML", tabName = "data_output_01"),
     menuItem("Data output: SG code", tabName = "data_output_02"),
     menuItem("Data output: Lat/Long point", tabName = "data_output_03"),
@@ -75,23 +76,23 @@ body <- dashboardBody(
             title = "Inputs", width = NULL, solidHeader = TRUE,
             status = "primary",
             useShinyjs(), # Add this to allow shinyjs functions to work in server
-            fileInput("user_shape", "Upload shapefile",
+            fileInput("user_shape",
+                      HTML("Upload shapefile or KML: <br/> <em> (.shp, .shx, .dbf,
+                           and .prj files are all <br/> required for shapefile upload)</em>"),
                       multiple = TRUE,
                       accept = c(
-                        # ".csv",
                         ".kml",
-                        # ".zip",
-                        ".shx", ".shp", ".sbn", ".sbx",
-                        ".dbf", ".prj"
+                        ".shx", ".shp", ".sbn", ".sbx", ".dbf", ".prj"
                       )
             ),
-            actionButton("plot_footprint", "Plot shapefile", style = blue_button),
+            actionButton("plot_footprint", "Plot shapefile or KML", style = blue_button),
             tags$hr(),
-            textInput("sgcode", "Enter 21 digit SG code", "K272N0HV000000017445000000"),
+            textInput("sgcode", "Enter 21 digit SG code:", "K272N0HV000000017445000000"),
             actionButton("search_prop", "Search property", style = blue_button),
             br(),
             tags$hr(),
-            tags$b("Enter latitude and longitude"),
+            tags$b("Enter latitude and longitude:"),
+            tags$p(),
             numericInput("lat", "Latitude", value = -30.375),
             numericInput("long", "Longitude", value = 30.6858),
             actionButton("add_point", "Add point",
@@ -137,14 +138,18 @@ body <- dashboardBody(
       fluidRow(
         box(
           title = "Species data - shapefile or KML",
-          width = 4, solidHeader = TRUE, status = "primary",
-          dataTableOutput("sens_feat_table_user")
-        ),
+          width = 8, solidHeader = TRUE, status = "primary",
+          gt_output(outputId = "sens_feat_table_user"),
+          br(),
+          downloadButton(outputId = "download_species", label = "Download data from table")
+        )
+      ),
+      fluidRow(
         box(
           title = "Farm/ERF property data - shapefile or KML",
-          width = 8, solidHeader = TRUE, status = "primary",
-          dataTableOutput("property_table_user")
-        )
+          width = 12, solidHeader = TRUE, status = "primary",
+          gt_output("property_table_user")
+          )
       )
     ),
 
@@ -154,12 +159,14 @@ body <- dashboardBody(
         box(
           title = "Species data - SG code",
           width = 4, solidHeader = TRUE, status = "success",
-          dataTableOutput("sens_feat_table_sg")
-        ),
+          gt_output("sens_feat_table_sg")
+        )
+      ),
+      fluidRow(
         box(
           title = "Farm/ERF property data - SG code",
           width = 8, solidHeader = TRUE, status = "success",
-          dataTableOutput("property_table_sg")
+          gt_output("property_table_sg")
         )
       )
     ),
@@ -170,12 +177,14 @@ body <- dashboardBody(
         box(
           title = "Species data - Lat/Long point",
           width = 4, solidHeader = TRUE, status = "warning",
-          dataTableOutput("sens_feat_table_point")
-        ),
+          gt_output("sens_feat_table_point")
+        )
+      ),
+      fluidRow(
         box(
           title = "Farm/ERF property data - Lat/Long point",
           width = 8, solidHeader = TRUE, status = "warning",
-          dataTableOutput("property_table_point")
+          gt_output("property_table_point")
         )
       )
     ),
@@ -185,13 +194,17 @@ body <- dashboardBody(
       fluidRow(
         box(
           title = "Species data - hand drawn polygon",
-          width = 4, solidHeader = TRUE, status = "danger",
-          dataTableOutput("sens_feat_table_hand")
-        ),
+          width = 8, solidHeader = TRUE, status = "danger",
+          # height = 200,
+          collapsible = TRUE,
+          gt_output("sens_feat_table_hand")
+        )
+      ),
+      fluidRow(
         box(
           title = "Farm/ERF property data - hand drawn polygon",
-          width = 8, solidHeader = TRUE, status = "danger",
-          dataTableOutput("property_table_hand")
+          width = 12, solidHeader = TRUE, status = "danger",
+          gt_output("property_table_hand")
         )
       )
     ),
