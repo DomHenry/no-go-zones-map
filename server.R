@@ -252,56 +252,6 @@ server <- function(input, output, session) {
       poly <- NULL
     }
 
-    # if(nrow(shpdf) == 1){ # this really should be if datapath has contains ".kml"
-    #
-    #   poly <- st_read(shpdf$datapath)
-    #   poly <- poly %>%
-    #     st_transform(crs = latlongCRS)
-    #   st_crs(poly) <- latlongCRS
-    #   return(poly)
-    #
-    #   } else if (nrow(shpdf) == 2){
-    #
-    #     poly <- NULL
-    #     return(NULL)
-    #
-    #   } else if (nrow(shpdf) > 2){
-    #
-    #   tempdirname <- dirname(shpdf$datapath[1])
-    #
-    #   for (i in 1:nrow(shpdf)) {
-    #     file.rename(
-    #       shpdf$datapath[i],
-    #       paste0(tempdirname, "/", shpdf$name[i])
-    #     )
-    #   }
-    #   poly <- st_read(paste(tempdirname,
-    #                         shpdf$name[grep(pattern = "*.shp$", shpdf$name)],
-    #                         sep = "/"
-    #   ))
-    #
-    #   # Catch error of user doesn't upload prj file
-    #   st_try <- try({
-    #     poly %>%
-    #       st_transform(crs = latlongCRS)
-    #   })
-    #
-    #   if(inherits(st_try, "try-error")){
-    #     st_crs(poly) <- latlongCRS
-    #     poly <- poly %>%
-    #       st_transform(crs = latlongCRS)
-    #
-    #   } else {
-    #     poly <- poly %>%
-    #       st_transform(crs = latlongCRS)
-    #     st_crs(poly) <- latlongCRS
-    #
-    #     }
-    #
-    #   return(poly)
-    #
-    # }
-
   })
 
   ###  Plot user input polygon ----
