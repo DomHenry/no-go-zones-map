@@ -41,13 +41,13 @@ header <- dashboardHeader(
 ## Sidebar ----
 sidebar <- dashboardSidebar(
   sidebarMenu(
-    menuItem("Welcome", tabName = "welcome"),
-    menuItem("Interactive map", tabName = "int_map", selected = TRUE),
-    menuItem("Data output: Shapefile or KML", tabName = "data_output_01"),
-    menuItem("Data output: SG code", tabName = "data_output_02"),
-    menuItem("Data output: Lat/Long point", tabName = "data_output_03"),
-    menuItem("Data output: Hand-drawn polygon", tabName = "data_output_04"),
-    menuItem("Help", tabName = "help")
+    menuItem("Welcome", tabName = "welcome", icon = icon("info-circle")),
+    menuItem("Interactive map", tabName = "int_map", selected = TRUE,  icon = icon("map-marked-alt")),
+    menuItem("Data output: Shapefile or KML", tabName = "data_output_01", icon = icon("table")),
+    menuItem("Data output: SG code", tabName = "data_output_02",icon = icon("table")),
+    menuItem("Data output: Lat/Long point", tabName = "data_output_03",icon = icon("table")),
+    menuItem("Data output: Hand-drawn polygon", tabName = "data_output_04",icon = icon("table")),
+    menuItem("Help", tabName = "help", icon = icon("question-circle"))
   )
 )
 
@@ -62,6 +62,7 @@ body <- dashboardBody(
     tabItem(
       tabName = "welcome",
       h1("Welcome to the No-Go Map"),
+      img(src = "ewt_01.png", height = "200px"),
       h1("Load time is approximately 10 seconds - please be patient"),
       h1("Naviagte to 'Interactive Map' tab to get started"),
       h1("In order to load shapefiles - select all files simultaneously"),
@@ -121,7 +122,7 @@ body <- dashboardBody(
               id = "cadastraldiv",
               absolutePanel(
                 id = "add_data", class = "panel panel-default",
-                style = "padding-left:80px; padding-top:50px;
+                style = "padding-left:50px; padding-top:60px;
                   background-color: #9ACD32; opacity: 1.0",
                 fixed = TRUE, draggable = FALSE,
                 # top = 400, right = 30, left = "auto", bottom = "auto",
@@ -129,7 +130,7 @@ body <- dashboardBody(
                 top = 300, right = 300, left = "auto", bottom = "auto",
                 width = 350, height = 200,
                 br(),
-                actionButton("add_cadastral", label = tags$b("Click here to add map data")) # Dont use HTML
+                actionButton("add_cadastral", label = tags$b("Click here to add data and get started")) # Dont use HTML
               )
             ),
             shinyjs::hidden(
@@ -179,7 +180,9 @@ body <- dashboardBody(
           title = "Species data - SG code",
           width = 4, solidHeader = TRUE, status = "success",
           collapsible = TRUE,
-          gt_output("sens_feat_table_sg")
+          gt_output("sens_feat_table_sg"),
+          br(),
+          downloadButton(outputId = "download_species_02", label = "Download species data")
         )
       ),
       fluidRow(
@@ -187,7 +190,9 @@ body <- dashboardBody(
           title = "Farm/ERF property data - SG code",
           width = 8, solidHeader = TRUE, status = "success",
           collapsible = TRUE,
-          gt_output("property_table_sg")
+          gt_output("property_table_sg"),
+          br(),
+          downloadButton(outputId = "download_property_02", label = "Download property data")
         )
       )
     ),
@@ -199,7 +204,9 @@ body <- dashboardBody(
           title = "Species data - Lat/Long point",
           width = 4, solidHeader = TRUE, status = "warning",
           collapsible = TRUE,
-          gt_output("sens_feat_table_point")
+          gt_output("sens_feat_table_point"),
+          br(),
+          downloadButton(outputId = "download_species_03", label = "Download species data")
         )
       ),
       fluidRow(
@@ -207,7 +214,9 @@ body <- dashboardBody(
           title = "Farm/ERF property data - Lat/Long point",
           width = 8, solidHeader = TRUE, status = "warning",
           collapsible = TRUE,
-          gt_output("property_table_point")
+          gt_output("property_table_point"),
+          br(),
+          downloadButton(outputId = "download_property_03", label = "Download property data")
         )
       )
     ),
@@ -220,7 +229,9 @@ body <- dashboardBody(
           width = 8, solidHeader = TRUE, status = "danger",
           # height = 200,
           collapsible = TRUE,
-          gt_output("sens_feat_table_hand")
+          gt_output("sens_feat_table_hand"),
+          br(),
+          downloadButton(outputId = "download_species_04", label = "Download species data")
         )
       ),
       fluidRow(
@@ -228,7 +239,9 @@ body <- dashboardBody(
           title = "Farm/ERF property data - hand drawn polygon",
           width = 12, solidHeader = TRUE, status = "danger",
           collapsible = TRUE,
-          gt_output("property_table_hand")
+          gt_output("property_table_hand"),
+          br(),
+          downloadButton(outputId = "download_property_04", label = "Download property data")
         )
       )
     ),
