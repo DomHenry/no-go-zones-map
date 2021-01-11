@@ -68,12 +68,13 @@ server <- function(input, output, session) {
                 title = "Legend",
                 opacity = opacity_cols
       ) %>%
-      # leafem::addLogo(img = "data_input/ewt_01.png",
-      #                 src = "local",
-      #                 url = "https://www.ewt.org.za/",
-      #                 position = "topleft",
-      #                 offset.x = 50,
-      #                 width = 60) %>%
+      leafem::addLogo(img = "ewt_01.png", # Note 5
+                      src = "remote",
+                      url = "https://www.ewt.org.za/",
+                      position = "bottomleft",
+                      offset.x = 5,
+                      offset.y = 40,
+                      width = 70) %>%
       addResetMapButton() %>%
       hideGroup("Protected areas") %>%
       leafem::addMouseCoordinates() %>%
@@ -626,15 +627,15 @@ server <- function(input, output, session) {
       align = "left"
   )
 
-  ### EST point data table ----
-  output$sens_feat_table_point <-render_gt(
-    sens_df_point(),
-    align = "left"
-  )
-
   ### EST SG data table ----
   output$sens_feat_table_sg <- render_gt(
     expr = sens_df_sg(),
+    align = "left"
+  )
+
+  ### EST point data table ----
+  output$sens_feat_table_point <-render_gt(
+    sens_df_point(),
     align = "left"
   )
 
@@ -655,7 +656,7 @@ server <- function(input, output, session) {
   ### SG code property data table ----
   output$property_table_sg <- render_gt(
     expr = {
-      require(prop_extract())
+      req(prop_extract())
       df <- compile_property_table(prop_extract(), "Farm_field")
       df <- draw_gt_property(df, prop_type = Farm_field)
       },
@@ -693,7 +694,60 @@ server <- function(input, output, session) {
     }
   )
 
+  output$download_species_02 <- downloadHandler(
+    filename = function() {
+      paste0(Sys.Date(), "_species_data_02.csv")
+    },
+    content = function(file) {
+      write.csv(sens_df_sg(), file, row.names = FALSE)
+    }
+  )
 
+  output$download_property_02 <- downloadHandler(
+    filename = function() {
+      paste0(Sys.Date(), "_property_data_02.csv")
+    },
+    content = function(file) {
+      df <- compile_property_table(prop_extract(), "Farm_field")
+      write.csv(df, file, row.names = FALSE)
+    }
+  )
+
+  output$download_species_03 <- downloadHandler(
+    filename = function() {
+      paste0(Sys.Date(), "_species_data_03.csv")
+    },
+    content = function(file) {
+      write.csv(sens_df_point(), file, row.names = FALSE)
+    }
+  )
+
+  output$download_property_03 <- downloadHandler(
+    filename = function() {
+      paste0(Sys.Date(), "_property_data_03.csv")
+    },
+    content = function(file) {
+      write.csv(prop_df_point(), file, row.names = FALSE)
+    }
+  )
+
+  output$download_species_04 <- downloadHandler(
+    filename = function() {
+      paste0(Sys.Date(), "_species_data_04.csv")
+    },
+    content = function(file) {
+      write.csv(sens_df_hand(), file, row.names = FALSE)
+    }
+  )
+
+  output$download_property_04 <- downloadHandler(
+    filename = function() {
+      paste0(Sys.Date(), "_property_data_04.csv")
+    },
+    content = function(file) {
+      write.csv(prop_df_hand(), file, row.names = FALSE)
+    }
+  )
 }
 
 
@@ -712,4 +766,4 @@ server <- function(input, output, session) {
 # Map name (e.g., nogomap) is the first part of "_draw_new_feature"
 
 ## Note 5 ----
-
+# Create a folder called "www" in app.R directory and put images in there. Don't reference the folder as a the source, shiny will automatically look there.
