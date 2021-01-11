@@ -10,6 +10,13 @@ server <- function(input, output, session) {
 
   ## GEOMETRY PLOTTING ----
 
+  ### Map settings ----
+
+  # Names: ("firebrick2", "darkolivegreen3", "dodgerblue", "darkgoldenrod1")
+  layer_cols <- c("#EE2C2C", "#A2CD5A", "#1E90FF", "#FFB90F")
+  opacity_cols <- 0.5
+  overlay_grp_names <-  c("No-go areas","Protected areas","Farm portions","ERFs")
+
   ### Plot base map ----
   output$nogomap <- renderLeaflet({
 
@@ -19,7 +26,7 @@ server <- function(input, output, session) {
         options = list(detectRetina = TRUE),
         group = "Topographic"
       ) %>%
-      addEsriBasemapLayer(  ## See https://esri.github.io/esri-leaflet/api-reference/layers/basemap-layer.html
+      addEsriBasemapLayer(  ## Note 1
         key = esriBasemapLayers$Streets,
         options = list(detectRetina = TRUE),
         group = "Streets"
@@ -44,25 +51,22 @@ server <- function(input, output, session) {
               lat = -29.1707702,
               zoom = 6) %>%
       addPolygons(
-        # data = high_sens_uni,
-        # popup = "NO-GO AREA",
-        # label = "NoGO",
         data = high_sens_all,
         popup = ~ scntfc_,
-        label = "NoGO",
+        label = "No-go area",
         group = "No-go areas",
-        fillColor = "red",
-        fillOpacity = 0.75,
+        fillColor = layer_cols[[1]],
+        fillOpacity = opacity_cols,
         stroke = TRUE,
         color = "black",
         weight = 0.8,
         smoothFactor = 1.5
       ) %>%
       addLegend("bottomright",
-                colors = c("red"),
+                colors = layer_cols[[1]],
                 labels = c("No-Go"),
                 title = "Legend",
-                opacity = 0.6
+                opacity = opacity_cols
       ) %>%
       # leafem::addLogo(img = "data_input/ewt_01.png",
       #                 src = "local",
@@ -71,13 +75,16 @@ server <- function(input, output, session) {
       #                 offset.x = 50,
       #                 width = 60) %>%
       addResetMapButton() %>%
+      hideGroup("Protected areas") %>%
       leafem::addMouseCoordinates() %>%
       addDrawToolbar(polylineOptions = FALSE,
                      polygonOptions = drawPolygonOptions(
-                       shapeOptions = drawShapeOptions(color = "orange", fillColor = "orange")
+                       shapeOptions = drawShapeOptions(color = "#A0522D",
+                                                       fillColor = "#A0522D")
                      ),
                      rectangleOptions = drawRectangleOptions(
-                       shapeOptions = drawShapeOptions(color = "orange", fillColor = "orange")
+                       shapeOptions = drawShapeOptions(color = "#A0522D",
+                                                       fillColor = "#A0522D")
                      ),
                      markerOptions = FALSE,
                      circleMarkerOptions = FALSE,
@@ -89,6 +96,9 @@ server <- function(input, output, session) {
   ### Add cadastral data -----
   observeEvent(input$add_cadastral, {
 
+    shinyjs::hide("cadastraldiv")
+    shinyjs::show("clearcontroldiv")
+
     leafletProxy("nogomap") %>%
       clearControls() %>%
       addLayersControl(
@@ -96,21 +106,21 @@ server <- function(input, output, session) {
                        "Streets",
                        "Imagery"
         ),
-        overlayGroups= c("No-go areas","Protected areas","Farm portions","ERFs"),
+        overlayGroups= overlay_grp_names,
         options = layersControlOptions(collapsed=FALSE)
       ) %>%
 
       clearGroup("No-go areas") %>%
-      addMapPane("farm_polys", zIndex = 410) %>% # Farms will plot beneath no-go polys
+      addMapPane("farm_polys", zIndex = 410) %>% # Farms plot beneath no-go polys
       addMapPane("erf_polys", zIndex = 415) %>%
-      addMapPane("nogo_polys", zIndex = 420) %>% # No-go polys will plot above farms
+      addMapPane("nogo_polys", zIndex = 420) %>% # No-go plot above farms
       addPolygons(
         data = farms,
         group = "Farm portions",
         popup =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
         label =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
-        fillColor = "blue",
-        fillOpacity = 0.4,
+        fillColor = layer_cols[3],
+        fillOpacity = opacity_cols,
         stroke = TRUE,
         color = "black",
         weight = 0.8,
@@ -118,14 +128,12 @@ server <- function(input, output, session) {
         options = pathOptions(pane = "farm_polys")
       ) %>%
       addPolygons(
-        # data = erf,
-        # popup =  "ERF property (click for details)",
         data = erf_all,
         popup =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
         label =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
         group = "ERFs",
-        fillColor = "yellow",
-        fillOpacity = 0.4,
+        fillColor = layer_cols[4],
+        fillOpacity = opacity_cols,
         stroke = TRUE,
         color = "black",
         weight = 0.8,
@@ -136,23 +144,20 @@ server <- function(input, output, session) {
         data = pa,
         group = "Protected areas",
         popup = ~ cur_nme,
-        fillColor = "lime",
-        fillOpacity = 0.4,
+        fillColor = layer_cols[2],
+        fillOpacity = opacity_cols,
         stroke = TRUE,
         color = "black",
         weight = 0.8,
         smoothFactor = 2
       ) %>%
       addPolygons(
-        # data = high_sens_uni,
-        # popup = "NO-GO AREA",
-        # label = "NoGO",
         data = high_sens_all,
         popup = ~ scntfc_,
-        label = "NoGO",
+        label = "No-go area",
         group = "No-go areas",
-        fillColor = "red",
-        fillOpacity = 0.75,
+        fillColor = layer_cols[1],
+        fillOpacity = opacity_cols,
         stroke = TRUE,
         color = "black",
         weight = 0.8,
@@ -160,10 +165,10 @@ server <- function(input, output, session) {
         options = pathOptions(pane = "nogo_polys")
       ) %>%
       addLegend("bottomright",
-                colors = c("red","lime","blue","yellow"),
+                colors = layer_cols,
                 labels = c("No-Go","PA","Farm portion","ERF"),
                 title = "Legend",
-                opacity = 0.6
+                opacity = opacity_cols
       )
 
   })
@@ -180,14 +185,14 @@ server <- function(input, output, session) {
       clearGroup("cranes") %>%
       clearControls() %>%
       addLegend("bottomright",
-                colors = c("red","lime","blue","yellow"),
+                colors = layer_cols,
                 labels = c("No-Go","PA","Farm portion","ERF"),
                 title = "Legend",
-                opacity = 0.6) %>%
+                opacity = opacity_cols) %>%
       removeLayersControl() %>%
       addLayersControl(
         baseGroups = c("Topographic", "Streets","Imagery"),
-        overlayGroups= c("No-go areas","Protected areas","Farm portions","ERFs"),
+        overlayGroups= overlay_grp_names,
         options = layersControlOptions(collapsed=FALSE)
       ) %>%
       hideGroup("Farm portions") %>%
@@ -206,7 +211,7 @@ server <- function(input, output, session) {
     updateTextInput(session, "sgcode", label = "Enter 21 digit SG code", value = "")
     updateNumericInput(session, "lat", "Latitude", value = NA)
     updateNumericInput(session, "long", "Longitude", value = NA)
-    shinyjs::reset("user_shape") # Doesn't remove underlying data (only text in widget)
+    shinyjs::reset("user_shape") # Note 2
     shp_value$poly_shp <- NULL
   })
 
@@ -267,8 +272,8 @@ server <- function(input, output, session) {
           data = user_polygon(),
           group = "User shapefile",
           popup = "User shapefile",
-          fillColor = "purple",
-          fillOpacity = 0.4,
+          fillColor = "#912CEE",
+          fillOpacity = opacity_cols,
           stroke = TRUE,
           color = "black",
           weight = 0.8,
@@ -282,16 +287,16 @@ server <- function(input, output, session) {
         removeLayersControl() %>%
         addLayersControl(
           baseGroups = c("Topographic", "Streets","Imagery"),
-          overlayGroups= c("No-go areas","Protected areas","Farm portions","ERFs", "User shapefile"),
+          overlayGroups= c(overlay_grp_names, "User shapefile"),
           options = layersControlOptions(collapsed=FALSE)
         ) %>%
         showGroup("Farm portions") %>%
         clearControls() %>%
         addLegend("bottomright",
-                  colors = c("red","lime","blue","yellow","purple"),
-                  labels = c("No-Go","PA","Farm portion","ERF","User shapefile"),
+                  colors = c(layer_cols,"#912CEE"),
+                  labels = c(overlay_grp_names, "User shapefile"),
                   title = "Legend",
-                  opacity = 0.6
+                  opacity = opacity_cols
         )
         }
   })
@@ -335,9 +340,6 @@ server <- function(input, output, session) {
 
     req(input$sgcode)
 
-    # "K436N0FS000000016416000001" # FARM
-    # "K282N0GV042100011439000001" # ERF
-
     "K272N0HV000000017445000000" # FARM
     "W048C039000500001399000001" # ERF
 
@@ -361,7 +363,7 @@ server <- function(input, output, session) {
   ### Plot property from SG code ----
   observeEvent(input$search_prop,{
 
-    req(prop_extract()) # Won't plot if prop_extract() is NULL
+    req(prop_extract()) # Note 3
 
     cen <- sfc_as_cols(st_centroid(prop_extract())) %>%
       st_drop_geometry()
@@ -371,8 +373,8 @@ server <- function(input, output, session) {
         data = prop_extract(),
         group = "User shapefile",
         popup = "User shapefile",
-        fillColor = "purple",
-        fillOpacity = 0.4,
+        fillColor = "#912CEE",
+        fillOpacity = opacity_cols,
         stroke = TRUE,
         color = "black",
         weight = 0.8,
@@ -386,30 +388,28 @@ server <- function(input, output, session) {
       removeLayersControl() %>%
       addLayersControl(
         baseGroups = c("Topographic", "Streets","Imagery"),
-        overlayGroups= c("No-go areas","Protected areas","Farm portions","ERFs", "User shapefile"),
+        overlayGroups= c(overlay_grp_names, "User shapefile"),
         options = layersControlOptions(collapsed=FALSE)
       ) %>%
       hideGroup("Farm portions") %>%
       clearControls() %>%
       addLegend("bottomright",
-                colors = c("red","lime","blue","yellow","purple"),
-                labels = c("No-Go","PA","Farm portion","ERF","User shapefile"),
+                colors = c(layer_cols,"#912CEE"),
+                labels = c(overlay_grp_names, "User shapefile"),
                 title = "Legend",
-                opacity = 0.6
-      )
+                opacity = opacity_cols)
 
   })
 
 
-  ## POLYGON DOWNLOADS ----
+  ## HAND-DRAWN POLYGON DOWNLOAD ----
 
   ### Show download button ----
-  # Note - map name (e.g., nogomap) is the first part of "_draw_new_feature"
-  observeEvent(input$nogomap_draw_new_feature, {
+  observeEvent(input$nogomap_draw_new_feature, { # Note 4
     shinyjs::show("downloaddiv")
   })
 
-  ### Download user drawn shapes ----
+  ### Download hand-drawn shapes ----
   output$downloadData <- downloadHandler(
     filename = function() {
       paste("shapefile", "zip", sep=".")
@@ -430,8 +430,8 @@ server <- function(input, output, session) {
       if(length(shp_files) != 0) {
         file.remove(shp_files)
       }
-      st_write(shp, paste(temp_shp, "shapefile.shp", sep = "\\"))
-      # copy the zip file to the file argument
+      st_write(shp, paste(temp_shp, "user_shapefile.shp", sep = "\\"))
+      ## Copy the zip file to the file argument
       shp_files <- list.files(temp_shp, "shapefile*",
                               full.names = TRUE)
       zip(zipfile = file, files = shp_files, flags = "-j")
@@ -439,45 +439,7 @@ server <- function(input, output, session) {
     }
   )
 
-  ## GEOMETRY INTERSECTIONS ----
-
-  ### Hand drawn polygon and EST layer ----
-
-  # Create holder for reactive value
-  shp_value <- reactiveValues(
-    poly_shp = NULL
-  )
-
-  # Populate when shape is drawn
-  observeEvent(input$nogomap_draw_new_feature, {
-    shp_value$poly_shp = input$nogomap_draw_new_feature$geometry$coordinates[[1]]
-  })
-
-  sens_df_hand <- reactive({
-
-    # Use reactive value
-    req(shp_value)
-
-    geo <- shp_value$poly_shp
-
-    validate(
-      need(!is.null(geo), "Please draw polygon on map first")
-    )
-
-    lng <- map_dbl(geo, `[[`, 1)
-    lat <- map_dbl(geo, `[[`, 2)
-    shp <- st_as_sf(tibble(lon = lng, lat = lat),
-                    coords = c("lon", "lat"),
-                    crs = 4326) %>%
-      summarise(geometry = st_combine(geometry)) %>%
-      st_cast("POLYGON")
-
-    nogo_user_int <- st_intersection(shp, high_sens_all)
-    df <- compile_species_table(nogo_user_int)
-    df <- draw_gt(df)
-    return(df)
-
-  })
+  ## GEOM INTERSECTIONS: EST ----
 
   ### User polygon and EST layer ----
   sens_df_user <- reactive({
@@ -507,7 +469,6 @@ server <- function(input, output, session) {
   })
 
   ### User point and EST layer ----
-
   sens_df_point <- reactive({
 
     req(user_point())
@@ -537,9 +498,21 @@ server <- function(input, output, session) {
 
   })
 
-  ### Hand drawn polygon and farm/erf layer ----
-  prop_df_hand <- reactive({
+  ### Hand-drawn polygon and EST layer ----
 
+  ## Create holder for reactive value
+  shp_value <- reactiveValues(
+    poly_shp = NULL
+  )
+
+  ## Populate when shape is drawn
+  observeEvent(input$nogomap_draw_new_feature, {
+    shp_value$poly_shp = input$nogomap_draw_new_feature$geometry$coordinates[[1]]
+  })
+
+  sens_df_hand <- reactive({
+
+    ## Use reactive value
     req(shp_value)
 
     geo <- shp_value$poly_shp
@@ -556,19 +529,14 @@ server <- function(input, output, session) {
       summarise(geometry = st_combine(geometry)) %>%
       st_cast("POLYGON")
 
-    farm_int <- st_intersection(shp,farms)
-    erf_int <- st_intersection(shp,erf_all)
-
-
-    if (nrow(farm_int) > 0) {
-      df <- compile_property_table(farm_int,"Farm_field")
-      df <- draw_gt_property(df, Farm_field)
-    } else if (nrow(erf_int) > 0){
-      df <- compile_property_table(erf_int,"ERF_field")
-      df <- draw_gt_property(df, ERF_field)
-     }
+    nogo_user_int <- st_intersection(shp, high_sens_all)
+    df <- compile_species_table(nogo_user_int)
+    df <- draw_gt(df)
+    return(df)
 
   })
+
+  ## GEOM INTERSECTIONS: FARM/ERF ----
 
   ### User polygon and farm/erf layer ----
   prop_df_user <- reactive({
@@ -613,13 +581,44 @@ server <- function(input, output, session) {
 
   })
 
+  ### Hand-drawn polygon and farm/erf layer ----
+  prop_df_hand <- reactive({
+
+    req(shp_value)
+
+    geo <- shp_value$poly_shp
+
+    validate(
+      need(!is.null(geo), "Please draw polygon on map first")
+    )
+
+    lng <- map_dbl(geo, `[[`, 1)
+    lat <- map_dbl(geo, `[[`, 2)
+    shp <- st_as_sf(tibble(lon = lng, lat = lat),
+                    coords = c("lon", "lat"),
+                    crs = 4326) %>%
+      summarise(geometry = st_combine(geometry)) %>%
+      st_cast("POLYGON")
+
+    farm_int <- st_intersection(shp,farms)
+    erf_int <- st_intersection(shp,erf_all)
+
+
+    if (nrow(farm_int) > 0) {
+      df <- compile_property_table(farm_int,"Farm_field")
+      df <- draw_gt_property(df, Farm_field)
+    } else if (nrow(erf_int) > 0){
+      df <- compile_property_table(erf_int,"ERF_field")
+      df <- draw_gt_property(df, ERF_field)
+    }
+
+  })
 
   ## TABLES: SPECIES DATA -----
-
   table_width <- px(1200)
   table_height <- px(400)
 
-  ### Create sensitivity user polygon data table ----
+  ### EST user polygon data table ----
   output$sens_feat_table_user <- render_gt(
       expr = sens_df_user(),
       # width = table_width,
@@ -627,19 +626,19 @@ server <- function(input, output, session) {
       align = "left"
   )
 
-  ### Create sensitivity point data table ----
+  ### EST point data table ----
   output$sens_feat_table_point <-render_gt(
     sens_df_point(),
     align = "left"
   )
 
-  ### Create sensitivity SG data table ----
+  ### EST SG data table ----
   output$sens_feat_table_sg <- render_gt(
     expr = sens_df_sg(),
     align = "left"
   )
 
-  ### Create sensitivity hand data table ----
+  ### EST hand-drawn data table ----
   output$sens_feat_table_hand <- render_gt(
     expr = sens_df_hand(),
     align = "left"
@@ -647,13 +646,13 @@ server <- function(input, output, session) {
 
   ## TABLES: PROPERTY DATA -----
 
-  ### Create user polygon property data table ----
+  ### User polygon property data table ----
   output$property_table_user <- render_gt(
     expr = prop_df_user(),
     align = "left"
     )
 
-  ### Create SG code property data table ----
+  ### SG code property data table ----
   output$property_table_sg <- render_gt(
     expr = {
       require(prop_extract())
@@ -663,26 +662,54 @@ server <- function(input, output, session) {
     align = "left"
     )
 
-  ### Create point property data table ----
+  ### Point property data table ----
   output$property_table_point <- render_gt(
     prop_df_point(),
     align = "left"
   )
 
-  ### Create hand polygon property data table ----
+  ### Hand-drawn polygon property data table ----
   output$property_table_hand <- render_gt(
     expr = prop_df_hand(),
     align = "left"
   )
 
   # DOWNLOADS ----
-  output$download_species <- downloadHandler(
+  output$download_species_01 <- downloadHandler(
    filename = function() {
-      paste0(Sys.Date(), "species_data.csv")
+      paste0(Sys.Date(), "_species_data_01.csv")
     },
     content = function(file) {
-      write.csv(sens_df_point(), file, row.names = FALSE)
+      write.csv(sens_df_user(), file, row.names = FALSE)
     }
   )
+
+  output$download_property_01 <- downloadHandler(
+    filename = function() {
+      paste0(Sys.Date(), "_property_data_01.csv")
+    },
+    content = function(file) {
+      write.csv(prop_df_user(), file, row.names = FALSE)
+    }
+  )
+
+
 }
+
+
+# NOTES -------------------------------------------------------------------
+
+## Note 1 ----
+# See https://esri.github.io/esri-leaflet/api-reference/layers/basemap-layer.html
+
+## Note 2 ----
+# This function doesn't remove underlying data (only text in widget)
+
+## Note 3 ----
+# This will not plot if prop_extract() is NULL
+
+## Note 4 ----
+# Map name (e.g., nogomap) is the first part of "_draw_new_feature"
+
+## Note 5 ----
 
