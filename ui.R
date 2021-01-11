@@ -29,7 +29,7 @@ library(gt)
 
 # Increase upload file size -----------------------------------------------
 maxsize_MB <- 30 # megabytes
-options(shiny.maxRequestSize = maxsize_MB*1024^2)
+options(shiny.maxRequestSize = maxsize_MB * 1024^2)
 
 # Source ------------------------------------------------------------------
 
@@ -77,13 +77,13 @@ body <- dashboardBody(
             status = "primary",
             useShinyjs(), # Add this to allow shinyjs functions to work in server
             fileInput("user_shape",
-                      HTML("Upload shapefile or KML: <br/> <em> (.shp, .shx, .dbf,
+              HTML("Upload shapefile or KML: <br/> <em> (.shp, .shx, .dbf,
                            and .prj files are all <br/> required for shapefile upload)</em>"),
-                      multiple = TRUE,
-                      accept = c(
-                        ".kml",
-                        ".shx", ".shp", ".sbn", ".sbx", ".dbf", ".prj"
-                      )
+              multiple = TRUE,
+              accept = c(
+                ".kml",
+                ".shx", ".shp", ".sbn", ".sbx", ".dbf", ".prj"
+              )
             ),
             actionButton("plot_footprint", "Plot shapefile or KML", style = blue_button),
             tags$hr(),
@@ -96,7 +96,8 @@ body <- dashboardBody(
             numericInput("lat", "Latitude", value = -30.375),
             numericInput("long", "Longitude", value = 30.6858),
             actionButton("add_point", "Add point",
-                         style = blue_button)
+              style = blue_button
+            )
           )
         ),
         column(
@@ -104,35 +105,49 @@ body <- dashboardBody(
           box(
             title = NULL, width = NULL, solidHeader = TRUE,
             leafletOutput("nogomap", width = "100%", height = 620),
-            absolutePanel(
-              id = "clear_control", class = "panel panel-default",
-              fixed = TRUE, draggable = FALSE,
-              top = 350, right = 30, left = "auto", bottom = "auto",
-              width = "auto", height = "auto",
-              actionButton("map_reset", "Clear map inputs")
+            shinyjs::hidden(
+              div(
+                id = "clearcontroldiv",
+                absolutePanel(
+                  id = "clear_control", class = "panel panel-default",
+                  fixed = TRUE, draggable = FALSE,
+                  top = 350, right = 30, left = "auto", bottom = "auto",
+                  width = "auto", height = "auto",
+                  actionButton("map_reset", "Clear map inputs")
+                )
+              )
             ),
-            absolutePanel(
-              id = "add_data", class = "panel panel-default",
-              fixed = TRUE, draggable = FALSE,
-              top = 400, right = 30, left = "auto", bottom = "auto",
-              width = "auto", height = "auto",
-              actionButton("add_cadastral", "Add cadastral data")
+            div(
+              id = "cadastraldiv",
+              absolutePanel(
+                id = "add_data", class = "panel panel-default",
+                style = "padding-left:80px; padding-top:50px;
+                  background-color: #9ACD32; opacity: 1.0",
+                fixed = TRUE, draggable = FALSE,
+                # top = 400, right = 30, left = "auto", bottom = "auto",
+                # width = "auto", height = "auto",
+                top = 300, right = 300, left = "auto", bottom = "auto",
+                width = 350, height = 200,
+                br(),
+                actionButton("add_cadastral", label = tags$b("Click here to add map data")) # Dont use HTML
+              )
             ),
-            shinyjs::hidden(div(id = "downloaddiv",
-                                absolutePanel(
-                                  id = "download_shapefile", class = "panel panel-default",
-                                  fixed = TRUE, draggable = FALSE,
-                                  top = 350, right = 790, left = "auto", bottom = "auto",
-                                  width = "auto", height = "auto",
-                                  downloadButton("downloadData", "Download shape")
-                                )
-            )
+            shinyjs::hidden(
+              div(
+                id = "downloaddiv",
+                absolutePanel(
+                  id = "download_shapefile", class = "panel panel-default",
+                  fixed = TRUE, draggable = FALSE,
+                  top = 350, right = 790, left = "auto", bottom = "auto",
+                  width = "auto", height = "auto",
+                  downloadButton("downloadData", "Download shape")
+                  )
+                )
+              )
             )
           )
-        )
       )
     ),
-
     tabItem(
       tabName = "data_output_01",
       fluidRow(
@@ -140,16 +155,20 @@ body <- dashboardBody(
           title = "Species data - shapefile or KML",
           width = 8, solidHeader = TRUE, status = "primary",
           gt_output(outputId = "sens_feat_table_user"),
+          collapsible = TRUE,
           br(),
-          downloadButton(outputId = "download_species", label = "Download data from table")
+          downloadButton(outputId = "download_species_01", label = "Download species data")
         )
       ),
       fluidRow(
         box(
           title = "Farm/ERF property data - shapefile or KML",
           width = 12, solidHeader = TRUE, status = "primary",
-          gt_output("property_table_user")
-          )
+          collapsible = TRUE,
+          gt_output("property_table_user"),
+          br(),
+          downloadButton(outputId = "download_property_01", label = "Download property data")
+        )
       )
     ),
 
@@ -159,6 +178,7 @@ body <- dashboardBody(
         box(
           title = "Species data - SG code",
           width = 4, solidHeader = TRUE, status = "success",
+          collapsible = TRUE,
           gt_output("sens_feat_table_sg")
         )
       ),
@@ -166,6 +186,7 @@ body <- dashboardBody(
         box(
           title = "Farm/ERF property data - SG code",
           width = 8, solidHeader = TRUE, status = "success",
+          collapsible = TRUE,
           gt_output("property_table_sg")
         )
       )
@@ -177,6 +198,7 @@ body <- dashboardBody(
         box(
           title = "Species data - Lat/Long point",
           width = 4, solidHeader = TRUE, status = "warning",
+          collapsible = TRUE,
           gt_output("sens_feat_table_point")
         )
       ),
@@ -184,6 +206,7 @@ body <- dashboardBody(
         box(
           title = "Farm/ERF property data - Lat/Long point",
           width = 8, solidHeader = TRUE, status = "warning",
+          collapsible = TRUE,
           gt_output("property_table_point")
         )
       )
@@ -204,11 +227,11 @@ body <- dashboardBody(
         box(
           title = "Farm/ERF property data - hand drawn polygon",
           width = 12, solidHeader = TRUE, status = "danger",
+          collapsible = TRUE,
           gt_output("property_table_hand")
         )
       )
     ),
-
 
     tabItem(
       tabName = "help",
@@ -218,6 +241,7 @@ body <- dashboardBody(
     )
   )
 )
+
 
 ## Dashboard page ----
 ui <- dashboardPage(
