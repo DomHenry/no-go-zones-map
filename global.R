@@ -1,3 +1,48 @@
+## Libraries ----
+library(sf)
+library(tidyverse)
+library(shinysky)
+library(shiny)
+library(shinydashboard)
+library(shinyjs)
+library(shinycssloaders)
+library(leaflet)
+library(rgdal)
+library(shinythemes)
+library(DT)
+library(leaflet.extras)
+library(leaflet.esri)
+library(leafem)
+library(gt)
+
+## Load data ----
+load("data_input/spatial_data_inputs.RData")
+latlongCRS <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+sgdata <- c(unique(farms$PRCL_KEY),unique(erf_all$PRCL_KEY))
+
+## Increase upload file size ----
+maxsize_MB <- 30 # megabytes
+options(shiny.maxRequestSize = maxsize_MB * 1024^2)
+
+## DRAW BASE MAP HERE?!? -----
+
+
+# Profiling ----
+
+# https://lukesingham.com/shiny-r-performance-profiling/
+# profvis::profvis({ runApp(appDir = getwd())})
+
+# renv ----
+
+# renv::init()
+# renv::snapshot()
+# renv::restore()
+# Use renv::history() to view past versions of renv.lock that have been committed to your repository
+# Use renv::revert() to pull out an old version of renv.lock based on the previously-discovered commit
+# pkg_check <- installed.packages()
+
+
+## Helper functions ----
 set_zoom <- function(x){
 
   if(x > 50){
@@ -68,8 +113,8 @@ draw_gt <- function(x){
     tab_footnote(footnote = "Environmental Screening Tool",
                  locations = cells_column_labels(
                    columns = vars(`EST Theme`)
-                   )
-                 ) %>%
+                 )
+    ) %>%
     tab_style(
       style = list(
         cell_text(style = "italic")

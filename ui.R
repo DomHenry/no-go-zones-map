@@ -1,38 +1,3 @@
-## Libraries ----
-library(sf)
-library(tidyverse)
-library(shiny)
-library(shinydashboard)
-library(shinyjs)
-library(leaflet)
-library(rgdal)
-library(shinythemes)
-library(DT)
-library(leaflet.extras)
-library(leaflet.esri)
-library(leafem)
-library(gt)
-
-# Profiling ---------------------------------------------------------------
-
-# https://lukesingham.com/shiny-r-performance-profiling/
-# profvis::profvis({ runApp(appDir = getwd())})
-
-# renv --------------------------------------------------------------------
-
-# renv::init()
-# renv::snapshot()
-# renv::restore()
-# Use renv::history() to view past versions of renv.lock that have been committed to your repository
-# Use renv::revert() to pull out an old version of renv.lock based on the previously-discovered commit
-# pkg_check <- installed.packages()
-
-# Increase upload file size -----------------------------------------------
-maxsize_MB <- 30 # megabytes
-options(shiny.maxRequestSize = maxsize_MB * 1024^2)
-
-# Source ------------------------------------------------------------------
-
 ## UI ----
 header <- dashboardHeader(
   title = "No-Go Zones Map"
@@ -41,10 +6,12 @@ header <- dashboardHeader(
 ## Sidebar ----
 sidebar <- dashboardSidebar(
   sidebarMenu(
-    menuItem("Welcome", tabName = "welcome", icon = icon("info-circle")),
-    menuItem("Interactive map", tabName = "int_map", selected = TRUE,  icon = icon("map-marked-alt")),
+    menuItem("Welcome", tabName = "welcome", icon = icon("info-circle"),
+             selected = FALSE),
+    menuItem("Interactive map", tabName = "int_map", icon = icon("map-marked-alt"),
+             selected = TRUE),
     menuItem("Data output: Shapefile or KML", tabName = "data_output_01", icon = icon("table")),
-    menuItem("Data output: SG code", tabName = "data_output_02",icon = icon("table")),
+    menuItem("Data output: SG key", tabName = "data_output_02",icon = icon("table")),
     menuItem("Data output: Lat/Long point", tabName = "data_output_03",icon = icon("table")),
     menuItem("Data output: Hand-drawn polygon", tabName = "data_output_04",icon = icon("table")),
     menuItem("Help", tabName = "help", icon = icon("question-circle"))
@@ -66,7 +33,8 @@ body <- dashboardBody(
       h1("Load time is approximately 10 seconds - please be patient"),
       h1("Naviagte to 'Interactive Map' tab to get started"),
       h1("In order to load shapefiles - select all files simultaneously"),
-      h1("Try out functionality with the example SG code, or Lat long point below")
+      h1("Try out functionality with the example SG code, or Lat long point below"),
+      "http://csg.dla.gov.za/21charac.htm - SG code help"
     ),
     tabItem(
       tabName = "int_map",
@@ -88,8 +56,11 @@ body <- dashboardBody(
             ),
             actionButton("plot_footprint", "Plot shapefile or KML", style = blue_button),
             tags$hr(),
-            textInput("sgcode", "Enter 21 digit SG code:", "K272N0HV000000017445000000"),
-            actionButton("search_prop", "Search property", style = blue_button),
+            selectizeInput("sg_key", "Search with 21 digit SG key:",
+                           choices = c("Enter SG key" = "", sgdata),
+                           options=list(create=FALSE, selectOnTab = TRUE)
+                           ),
+            actionButton("search_prop", "Plot property", style = blue_button),
             br(),
             tags$hr(),
             tags$b("Enter latitude and longitude:"),
@@ -105,7 +76,9 @@ body <- dashboardBody(
           width = 9,
           box(
             title = NULL, width = NULL, solidHeader = TRUE,
-            leafletOutput("nogomap", width = "100%", height = 620),
+            leafletOutput("nogomap", width = "100%", height = 620) %>%
+              withSpinner(color="#0dc5c1"),
+            # busyIndicator(text = "Loading, please wait...", wait = 1000),
             shinyjs::hidden(
               div(
                 id = "clearcontroldiv",
@@ -122,13 +95,12 @@ body <- dashboardBody(
               id = "cadastraldiv",
               absolutePanel(
                 id = "add_data", class = "panel panel-default",
-                style = "padding-left:50px; padding-top:60px;
-                  background-color: #9ACD32; opacity: 1.0",
+                style = "padding-left:300px;
+                  background-color: #9ACD32; opacity: 0.9",
                 fixed = TRUE, draggable = FALSE,
-                # top = 400, right = 30, left = "auto", bottom = "auto",
-                # width = "auto", height = "auto",
-                top = 300, right = 300, left = "auto", bottom = "auto",
-                width = 350, height = 200,
+                left = "auto", bottom = "auto",
+                top = 350,
+                width = "100%", height = 70,
                 br(),
                 actionButton("add_cadastral", label = tags$b("Click here to add data and get started")) # Dont use HTML
               )
@@ -139,9 +111,9 @@ body <- dashboardBody(
                 absolutePanel(
                   id = "download_shapefile", class = "panel panel-default",
                   fixed = TRUE, draggable = FALSE,
-                  top = 350, right = 790, left = "auto", bottom = "auto",
+                  top = 350, right = 720, left = "auto", bottom = "auto",
                   width = "auto", height = "auto",
-                  downloadButton("downloadData", "Download shape")
+                  downloadButton("downloadData", "Download hand-drawn shape")
                   )
                 )
               )
@@ -153,7 +125,8 @@ body <- dashboardBody(
       tabName = "data_output_01",
       fluidRow(
         box(
-          title = "Species data - shapefile or KML",
+          # title = "Species data - shapefile or KML",
+          title = "Species data",
           width = 8, solidHeader = TRUE, status = "primary",
           gt_output(outputId = "sens_feat_table_user"),
           collapsible = TRUE,
@@ -163,7 +136,8 @@ body <- dashboardBody(
       ),
       fluidRow(
         box(
-          title = "Farm/ERF property data - shapefile or KML",
+          # title = "Farm/ERF property data - shapefile or KML",
+          title = "Property data",
           width = 12, solidHeader = TRUE, status = "primary",
           collapsible = TRUE,
           gt_output("property_table_user"),
@@ -177,8 +151,9 @@ body <- dashboardBody(
       tabName = "data_output_02",
       fluidRow(
         box(
-          title = "Species data - SG code",
-          width = 4, solidHeader = TRUE, status = "success",
+          # title = "Species data - SG code",
+          title = "Species data",
+          width = 8, solidHeader = TRUE, status = "success",
           collapsible = TRUE,
           gt_output("sens_feat_table_sg"),
           br(),
@@ -187,8 +162,9 @@ body <- dashboardBody(
       ),
       fluidRow(
         box(
-          title = "Farm/ERF property data - SG code",
-          width = 8, solidHeader = TRUE, status = "success",
+          # title = "Farm/ERF property data - SG code",
+          title = "Property data",
+          width = 12, solidHeader = TRUE, status = "success",
           collapsible = TRUE,
           gt_output("property_table_sg"),
           br(),
@@ -201,8 +177,9 @@ body <- dashboardBody(
       tabName = "data_output_03",
       fluidRow(
         box(
-          title = "Species data - Lat/Long point",
-          width = 4, solidHeader = TRUE, status = "warning",
+          # title = "Species data - Lat/Long point",
+          title = "Species data",
+          width = 8, solidHeader = TRUE, status = "warning",
           collapsible = TRUE,
           gt_output("sens_feat_table_point"),
           br(),
@@ -211,8 +188,9 @@ body <- dashboardBody(
       ),
       fluidRow(
         box(
-          title = "Farm/ERF property data - Lat/Long point",
-          width = 8, solidHeader = TRUE, status = "warning",
+          # title = "Farm/ERF property data - Lat/Long point",
+          title = "Property data",
+          width = 12, solidHeader = TRUE, status = "warning",
           collapsible = TRUE,
           gt_output("property_table_point"),
           br(),
@@ -225,7 +203,8 @@ body <- dashboardBody(
       tabName = "data_output_04",
       fluidRow(
         box(
-          title = "Species data - hand drawn polygon",
+          # title = "Species data - hand drawn polygon",
+          title = "Species data",
           width = 8, solidHeader = TRUE, status = "danger",
           # height = 200,
           collapsible = TRUE,
@@ -236,7 +215,8 @@ body <- dashboardBody(
       ),
       fluidRow(
         box(
-          title = "Farm/ERF property data - hand drawn polygon",
+          # title = "Farm/ERF property data - hand drawn polygon",
+          title = "Property data",
           width = 12, solidHeader = TRUE, status = "danger",
           collapsible = TRUE,
           gt_output("property_table_hand"),

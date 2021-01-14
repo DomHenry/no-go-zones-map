@@ -1,17 +1,9 @@
-library(shiny)
-
-# Load data ---------------------------------------------------------------
-load("data_input/spatial_data_inputs.RData")
-source("src/helper_functions.R")
-latlongCRS <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-
-## Server ----
+## SERVER ----
 server <- function(input, output, session) {
 
   ## GEOMETRY PLOTTING ----
 
   ### Map settings ----
-
   # Names: ("firebrick2", "darkolivegreen3", "dodgerblue", "darkgoldenrod1")
   layer_cols <- c("#EE2C2C", "#A2CD5A", "#1E90FF", "#FFB90F")
   opacity_cols <- 0.5
@@ -76,7 +68,6 @@ server <- function(input, output, session) {
                       offset.y = 40,
                       width = 70) %>%
       addResetMapButton() %>%
-      hideGroup("Protected areas") %>%
       leafem::addMouseCoordinates() %>%
       addDrawToolbar(polylineOptions = FALSE,
                      polygonOptions = drawPolygonOptions(
@@ -110,7 +101,9 @@ server <- function(input, output, session) {
         overlayGroups= overlay_grp_names,
         options = layersControlOptions(collapsed=FALSE)
       ) %>%
-
+      # hideGroup("Farm portions") %>%
+      hideGroup("ERFs") %>%
+      hideGroup("Protected areas") %>%
       clearGroup("No-go areas") %>%
       addMapPane("farm_polys", zIndex = 410) %>% # Farms plot beneath no-go polys
       addMapPane("erf_polys", zIndex = 415) %>%
@@ -209,7 +202,12 @@ server <- function(input, output, session) {
     #                editOptions = editToolbarOptions())
 
     ## Reset input boxes
-    updateTextInput(session, "sgcode", label = "Enter 21 digit SG code", value = "")
+    # updateTextInput(session, "sg_key", label = "Enter 21 digit SG code", value = "")
+
+    updateSelectizeInput(session,
+                         "sg_key", "Search with 21 digit SG key:",
+                         choices = c("Enter SG key" = "", sgdata),
+                         options=list(create=FALSE, selectOnTab = TRUE))
     updateNumericInput(session, "lat", "Latitude", value = NA)
     updateNumericInput(session, "long", "Longitude", value = NA)
     shinyjs::reset("user_shape") # Note 2
@@ -268,6 +266,8 @@ server <- function(input, output, session) {
       cen <- sfc_as_cols(st_centroid(user_polygon())) %>%
       st_drop_geometry()
 
+      poly_area <- as.numeric(st_area(user_polygon())/1000000)
+
       leafletProxy("nogomap") %>%
         addPolygons(
           data = user_polygon(),
@@ -283,7 +283,7 @@ server <- function(input, output, session) {
         setView(
           lng = cen$x,
           lat = cen$y,
-          zoom = 11
+          zoom = set_zoom(poly_area)
         )  %>%
         removeLayersControl() %>%
         addLayersControl(
@@ -339,13 +339,13 @@ server <- function(input, output, session) {
   ### Extract property from SG code ----
   prop_extract <- reactive({
 
-    req(input$sgcode)
+    req(input$sg_key)
 
     "K272N0HV000000017445000000" # FARM
     "W048C039000500001399000001" # ERF
 
-    ref_farm <- which(farms$PRCL_KEY %in% input$sgcode)
-    ref_erf <- which(erf_all$PRCL_KEY %in% input$sgcode)
+    ref_farm <- which(farms$PRCL_KEY %in% input$sg_key)
+    ref_erf <- which(erf_all$PRCL_KEY %in% input$sg_key)
 
     if (all(c(length(ref_farm) == 0,length(ref_erf) == 0))) {
       prop_extract <- NULL
@@ -369,6 +369,8 @@ server <- function(input, output, session) {
     cen <- sfc_as_cols(st_centroid(prop_extract())) %>%
       st_drop_geometry()
 
+    poly_area <- prop_extract()$poly_area[[1]]
+
     leafletProxy("nogomap") %>%
       addPolygons(
         data = prop_extract(),
@@ -382,9 +384,9 @@ server <- function(input, output, session) {
         smoothFactor = 2
       ) %>%
       setView(
-        lng = cen$x,
-        lat = cen$y,
-        zoom = 10
+        lng = cen$x[1],
+        lat = cen$y[1],
+        zoom = set_zoom(poly_area)
       )  %>%
       removeLayersControl() %>%
       addLayersControl(
@@ -553,11 +555,11 @@ server <- function(input, output, session) {
 
     if (nrow(farm_int) > 0) {
       df <- compile_property_table(farm_int,"Farm_field")
-      df <- draw_gt_property(df, Farm_field)
+      df <- draw_gt_property(df)
 
     } else if (nrow(erf_int) > 0){
       df <- compile_property_table(erf_int,"ERF_field")
-      df <- draw_gt_property(df, ERF_field)
+      df <- draw_gt_property(df)
 
     }
 
@@ -574,10 +576,10 @@ server <- function(input, output, session) {
 
     if (nrow(farm_int) > 0) {
       df <- compile_property_table(farm_int,"Farm_field")
-      df <- draw_gt_property(df, Farm_field)
+      df <- draw_gt_property(df)
     } else if (nrow(erf_int) > 0) {
       df <- compile_property_table(erf_int,"ERF_field")
-      df <- draw_gt_property(df, ERF_field)
+      df <- draw_gt_property(df)
     }
 
   })
@@ -607,10 +609,10 @@ server <- function(input, output, session) {
 
     if (nrow(farm_int) > 0) {
       df <- compile_property_table(farm_int,"Farm_field")
-      df <- draw_gt_property(df, Farm_field)
+      df <- draw_gt_property(df)
     } else if (nrow(erf_int) > 0){
       df <- compile_property_table(erf_int,"ERF_field")
-      df <- draw_gt_property(df, ERF_field)
+      df <- draw_gt_property(df)
     }
 
   })
@@ -658,7 +660,7 @@ server <- function(input, output, session) {
     expr = {
       req(prop_extract())
       df <- compile_property_table(prop_extract(), "Farm_field")
-      df <- draw_gt_property(df, prop_type = Farm_field)
+      df <- draw_gt_property(df)
       },
     align = "left"
     )
