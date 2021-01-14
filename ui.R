@@ -28,13 +28,25 @@ body <- dashboardBody(
   tabItems(
     tabItem(
       tabName = "welcome",
-      h1("Welcome to the No-Go Map"),
-      img(src = "ewt_01.png", height = "200px"),
-      h1("Load time is approximately 10 seconds - please be patient"),
-      h1("Naviagte to 'Interactive Map' tab to get started"),
-      h1("In order to load shapefiles - select all files simultaneously"),
-      h1("Try out functionality with the example SG code, or Lat long point below"),
-      "http://csg.dla.gov.za/21charac.htm - SG code help"
+      fluidRow(
+        column(
+          width = 9,
+          tabBox(
+            id='tabvals',
+            width=NULL,
+            tabPanel(title = "What is a no-go area?",
+                     includeMarkdown("data_input/Nogo_background_text.Rmd"),
+                     img(src = "ewt_01.png", height = "100px"),
+                     value=1),
+            tabPanel(title ="How to use the interactive map",
+                     "Add text",
+                     value=2),
+            tabPanel(title ="More resources",
+                     "Add more text",
+                     value=3)
+          )
+        )
+      )
     ),
     tabItem(
       tabName = "int_map",

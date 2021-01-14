@@ -37,12 +37,16 @@ options(shiny.maxRequestSize = maxsize_MB * 1024^2)
 # Use renv::revert() to pull out an old version of renv.lock based on the previously-discovered commit
 # pkg_check <- installed.packages()
 
-## Compile base map -----
-layer_cols <- c("#EE2C2C", "#A2CD5A", "#1E90FF", "#FFB90F")
-# ("firebrick2", "darkolivegreen3", "dodgerblue", "darkgoldenrod1")
+
+# Leaflet map settings ----
 opacity_cols <- 0.5
 overlay_grp_names <-  c("No-go areas","Protected areas","Farm portions","ERFs")
+layer_cols <- c("#EE2C2C", "#A2CD5A", "#1E90FF", "#FFB90F")
+# ("firebrick2", "darkolivegreen3", "dodgerblue", "darkgoldenrod1")
 
+## Compile base map -----
+
+### Add basemap layers and controls ----
 global_base_map <- leaflet() %>%
   addEsriBasemapLayer(
     key = esriBasemapLayers$Topographic,
@@ -67,24 +71,14 @@ global_base_map <- leaflet() %>%
                    "Streets",
                    "Imagery"
     ),
-    overlayGroups= overlay_grp_names,
     options = layersControlOptions(collapsed=FALSE)
   ) %>%
   setView(lng = 25.4015133,
           lat = -29.1707702,
-          zoom = 6) %>%
-  addPolygons(
-    data = high_sens_all,
-    popup = ~ scntfc_,
-    label = "No-go area",
-    group = "No-go areas",
-    fillColor = layer_cols[[1]],
-    fillOpacity = opacity_cols,
-    stroke = TRUE,
-    color = "black",
-    weight = 0.8,
-    smoothFactor = 1.5
-  ) %>%
+          zoom = 6)
+
+### Add logo and draw toolbar ----
+global_base_map <- global_base_map %>%
   leafem::addLogo(img = "ewt_01.png", # Note 5
                   src = "remote",
                   url = "https://www.ewt.org.za/",
@@ -106,10 +100,17 @@ global_base_map <- leaflet() %>%
                  markerOptions = FALSE,
                  circleMarkerOptions = FALSE,
                  circleOptions = FALSE,
-                 editOptions = editToolbarOptions()) %>%
-  hideGroup("ERFs") %>%
-  hideGroup("Protected areas") %>%
-  clearGroup("No-go areas") %>%
+                 editOptions = editToolbarOptions())
+### Add cadastral and EST data ----
+global_base_map <- global_base_map %>%
+  addLayersControl(
+    baseGroups = c("Topographic",
+                   "Streets",
+                   "Imagery"
+    ),
+    overlayGroups= overlay_grp_names,
+    options = layersControlOptions(collapsed=FALSE)
+  ) %>%
   addMapPane("farm_polys", zIndex = 410) %>% # Farms plot beneath no-go polys
   addMapPane("erf_polys", zIndex = 415) %>%
   addMapPane("nogo_polys", zIndex = 420) %>% # No-go plot above farms
@@ -150,12 +151,27 @@ global_base_map <- leaflet() %>%
     weight = 0.8,
     smoothFactor = 2
   ) %>%
+  addPolygons(
+    data = high_sens_all,
+    popup = ~ scntfc_,
+    label = "No-go area",
+    group = "No-go areas",
+    fillColor = layer_cols[1],
+    fillOpacity = opacity_cols,
+    stroke = TRUE,
+    color = "black",
+    weight = 0.8,
+    smoothFactor = 1.5,
+    options = pathOptions(pane = "nogo_polys")
+  ) %>%
   addLegend("bottomright",
             colors = layer_cols,
             labels = c("No-Go","PA","Farm portion","ERF"),
             title = "Legend",
             opacity = opacity_cols
-  )
+  ) %>%
+  hideGroup("Protected areas") %>%
+  hideGroup("ERFs")
 
 ## Helper functions ----
 set_zoom <- function(x){
