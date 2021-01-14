@@ -3,167 +3,23 @@ server <- function(input, output, session) {
 
   ## GEOMETRY PLOTTING ----
 
-  ### Map settings ----
-  # Names: ("firebrick2", "darkolivegreen3", "dodgerblue", "darkgoldenrod1")
-  layer_cols <- c("#EE2C2C", "#A2CD5A", "#1E90FF", "#FFB90F")
-  opacity_cols <- 0.5
-  overlay_grp_names <-  c("No-go areas","Protected areas","Farm portions","ERFs")
-
-  ### Plot base map ----
+  ### Compile base map ----
   output$nogomap <- renderLeaflet({
-
-    leaflet() %>%
-      addEsriBasemapLayer(
-        key = esriBasemapLayers$Topographic,
-        options = list(detectRetina = TRUE),
-        group = "Topographic"
-      ) %>%
-      addEsriBasemapLayer(  ## Note 1
-        key = esriBasemapLayers$Streets,
-        options = list(detectRetina = TRUE),
-        group = "Streets"
-      ) %>%
-      addEsriBasemapLayer(
-        key = esriBasemapLayers$Imagery,
-        options = list(detectRetina = TRUE),
-        group = "Imagery"
-      ) %>%
-      addScaleBar(
-        position = "bottomleft"
-      ) %>%
-      addLayersControl(
-        baseGroups = c("Topographic",
-                       "Streets",
-                       "Imagery"
-        ),
-        overlayGroups= c("No-go areas"),
-        options = layersControlOptions(collapsed=FALSE)
-      ) %>%
-      setView(lng = 25.4015133,
-              lat = -29.1707702,
-              zoom = 6) %>%
-      addPolygons(
-        data = high_sens_all,
-        popup = ~ scntfc_,
-        label = "No-go area",
-        group = "No-go areas",
-        fillColor = layer_cols[[1]],
-        fillOpacity = opacity_cols,
-        stroke = TRUE,
-        color = "black",
-        weight = 0.8,
-        smoothFactor = 1.5
-      ) %>%
-      addLegend("bottomright",
-                colors = layer_cols[[1]],
-                labels = c("No-Go"),
-                title = "Legend",
-                opacity = opacity_cols
-      ) %>%
-      leafem::addLogo(img = "ewt_01.png", # Note 5
-                      src = "remote",
-                      url = "https://www.ewt.org.za/",
-                      position = "bottomleft",
-                      offset.x = 5,
-                      offset.y = 40,
-                      width = 70) %>%
-      addResetMapButton() %>%
-      leafem::addMouseCoordinates() %>%
-      addDrawToolbar(polylineOptions = FALSE,
-                     polygonOptions = drawPolygonOptions(
-                       shapeOptions = drawShapeOptions(color = "#A0522D",
-                                                       fillColor = "#A0522D")
-                     ),
-                     rectangleOptions = drawRectangleOptions(
-                       shapeOptions = drawShapeOptions(color = "#A0522D",
-                                                       fillColor = "#A0522D")
-                     ),
-                     markerOptions = FALSE,
-                     circleMarkerOptions = FALSE,
-                     circleOptions = FALSE,
-                     editOptions = editToolbarOptions())
-
+    global_base_map
   })
 
-  ### Add cadastral data -----
+  ### Render base map ----
   observeEvent(input$add_cadastral, {
 
     shinyjs::hide("cadastraldiv")
     shinyjs::show("clearcontroldiv")
 
-    leafletProxy("nogomap") %>%
-      clearControls() %>%
-      addLayersControl(
-        baseGroups = c("Topographic",
-                       "Streets",
-                       "Imagery"
-        ),
-        overlayGroups= overlay_grp_names,
-        options = layersControlOptions(collapsed=FALSE)
-      ) %>%
-      # hideGroup("Farm portions") %>%
-      hideGroup("ERFs") %>%
-      hideGroup("Protected areas") %>%
-      clearGroup("No-go areas") %>%
-      addMapPane("farm_polys", zIndex = 410) %>% # Farms plot beneath no-go polys
-      addMapPane("erf_polys", zIndex = 415) %>%
-      addMapPane("nogo_polys", zIndex = 420) %>% # No-go plot above farms
-      addPolygons(
-        data = farms,
-        group = "Farm portions",
-        popup =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
-        label =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
-        fillColor = layer_cols[3],
-        fillOpacity = opacity_cols,
-        stroke = TRUE,
-        color = "black",
-        weight = 0.8,
-        smoothFactor = 3,
-        options = pathOptions(pane = "farm_polys")
-      ) %>%
-      addPolygons(
-        data = erf_all,
-        popup =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
-        label =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
-        group = "ERFs",
-        fillColor = layer_cols[4],
-        fillOpacity = opacity_cols,
-        stroke = TRUE,
-        color = "black",
-        weight = 0.8,
-        smoothFactor = 3,
-        options = pathOptions(pane = "erf_polys")
-      ) %>%
-      addPolygons(
-        data = pa,
-        group = "Protected areas",
-        popup = ~ cur_nme,
-        fillColor = layer_cols[2],
-        fillOpacity = opacity_cols,
-        stroke = TRUE,
-        color = "black",
-        weight = 0.8,
-        smoothFactor = 2
-      ) %>%
-      addPolygons(
-        data = high_sens_all,
-        popup = ~ scntfc_,
-        label = "No-go area",
-        group = "No-go areas",
-        fillColor = layer_cols[1],
-        fillOpacity = opacity_cols,
-        stroke = TRUE,
-        color = "black",
-        weight = 0.8,
-        smoothFactor = 1.5,
-        options = pathOptions(pane = "nogo_polys")
-      ) %>%
-      addLegend("bottomright",
-                colors = layer_cols,
-                labels = c("No-Go","PA","Farm portion","ERF"),
-                title = "Legend",
-                opacity = opacity_cols
-      )
+    output$nogomap_base <- renderUI({
+
+      leafletOutput("nogomap", width = "100%", height = 620) %>%
+        withSpinner(type = 1, size = 1.5)
+
+    })
 
   })
 
@@ -202,8 +58,6 @@ server <- function(input, output, session) {
     #                editOptions = editToolbarOptions())
 
     ## Reset input boxes
-    # updateTextInput(session, "sg_key", label = "Enter 21 digit SG code", value = "")
-
     updateSelectizeInput(session,
                          "sg_key", "Search with 21 digit SG key:",
                          choices = c("Enter SG key" = "", sgdata),

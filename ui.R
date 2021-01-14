@@ -7,9 +7,9 @@ header <- dashboardHeader(
 sidebar <- dashboardSidebar(
   sidebarMenu(
     menuItem("Welcome", tabName = "welcome", icon = icon("info-circle"),
-             selected = FALSE),
-    menuItem("Interactive map", tabName = "int_map", icon = icon("map-marked-alt"),
              selected = TRUE),
+    menuItem("Interactive map", tabName = "int_map", icon = icon("map-marked-alt"),
+             selected = FALSE),
     menuItem("Data output: Shapefile or KML", tabName = "data_output_01", icon = icon("table")),
     menuItem("Data output: SG key", tabName = "data_output_02",icon = icon("table")),
     menuItem("Data output: Lat/Long point", tabName = "data_output_03",icon = icon("table")),
@@ -76,9 +76,7 @@ body <- dashboardBody(
           width = 9,
           box(
             title = NULL, width = NULL, solidHeader = TRUE,
-            leafletOutput("nogomap", width = "100%", height = 620) %>%
-              withSpinner(color="#0dc5c1"),
-            # busyIndicator(text = "Loading, please wait...", wait = 1000),
+            uiOutput(outputId = "nogomap_base"),
             shinyjs::hidden(
               div(
                 id = "clearcontroldiv",
