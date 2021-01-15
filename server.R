@@ -68,11 +68,37 @@ server <- function(input, output, session) {
   })
 
 
+  ### Reset shapefile upload input ----
+  values <- reactiveValues(
+    upload_state = NULL
+  )
+
+  observeEvent(input$user_shape, {
+    values$upload_state <- "uploaded"
+  })
+
+  observeEvent(input$map_reset, {
+    values$upload_state <- "reset"
+  })
+
+  file_input <- reactive({
+    if (is.null(values$upload_state)) {
+      return(NULL)
+    } else if (values$upload_state == "uploaded") {
+      return(input$user_shape)
+    } else if (values$upload_state == "reset") {
+      return(NULL)
+    }
+  })
+
   ### Upload and extract user polygon (either KML or SHAPEFILE) ----
   user_polygon <- reactive({
 
-    req(input$user_shape)
-    shpdf <- input$user_shape
+    shpdf <- file_input()
+
+    validate(
+      need(!is.null(shpdf), "Please upload valid shapefile files")
+    )
 
     shp_needed <- c("shp","shx","dbf","prj")
     shp_ext <- tools::file_ext(shpdf$datapath)
@@ -300,7 +326,7 @@ server <- function(input, output, session) {
   ### User polygon and EST layer ----
   sens_df_user <- reactive({
 
-    req(input$user_shape)
+    # req(input$user_shape)
 
     validate(
       need(!is.null(user_polygon()), "Please upload valid shapefile files")
