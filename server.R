@@ -30,7 +30,7 @@ server <- function(input, output, session) {
       setView(lng = 25.4015133,
               lat = -29.1707702,
               zoom = 6) %>%
-      clearGroup("User shapefile") %>%
+      clearGroup("User property") %>%
       clearGroup("User point") %>%
       clearGroup("cranes") %>%
       clearControls() %>%
@@ -48,9 +48,8 @@ server <- function(input, output, session) {
       hideGroup("Farm portions") %>%
       hideGroup("ERFs") %>%
       hideGroup("Protected areas")
-
-    # NOT WORKING:
-    # removeDrawToolbar(clearFeatures=TRUE) #%>%
+    # # NOT WORKING: # Note 6
+    # removeDrawToolbar(clearFeatures=TRUE) %>%
     # addDrawToolbar(polylineOptions = FALSE,
     #                markerOptions = FALSE,
     #                circleMarkerOptions = FALSE,
@@ -125,8 +124,8 @@ server <- function(input, output, session) {
       leafletProxy("nogomap") %>%
         addPolygons(
           data = user_polygon(),
-          group = "User shapefile",
-          popup = "User shapefile",
+          group = "User property",
+          popup = "User property",
           fillColor = "#912CEE",
           fillOpacity = opacity_cols,
           stroke = TRUE,
@@ -142,14 +141,14 @@ server <- function(input, output, session) {
         removeLayersControl() %>%
         addLayersControl(
           baseGroups = c("Topographic", "Streets","Imagery"),
-          overlayGroups= c(overlay_grp_names, "User shapefile"),
+          overlayGroups= c(overlay_grp_names, "User property"),
           options = layersControlOptions(collapsed=FALSE)
         ) %>%
         showGroup("Farm portions") %>%
         clearControls() %>%
         addLegend("bottomright",
                   colors = c(layer_cols,"#912CEE"),
-                  labels = c(overlay_grp_names, "User shapefile"),
+                  labels = c(overlay_grp_names, "User property"),
                   title = "Legend",
                   opacity = opacity_cols
         )
@@ -198,8 +197,8 @@ server <- function(input, output, session) {
     "K272N0HV000000017445000000" # FARM
     "W048C039000500001399000001" # ERF
 
-    ref_farm <- which(farms$PRCL_KEY %in% input$sg_key)
-    ref_erf <- which(erf_all$PRCL_KEY %in% input$sg_key)
+    ref_farm <- which(farms$ID %in% input$sg_key)
+    ref_erf <- which(erf_all$ID %in% input$sg_key)
 
     if (all(c(length(ref_farm) == 0,length(ref_erf) == 0))) {
       prop_extract <- NULL
@@ -228,8 +227,8 @@ server <- function(input, output, session) {
     leafletProxy("nogomap") %>%
       addPolygons(
         data = prop_extract(),
-        group = "User shapefile",
-        popup = "User shapefile",
+        group = "User property",
+        popup = "User property",
         fillColor = "#912CEE",
         fillOpacity = opacity_cols,
         stroke = TRUE,
@@ -245,14 +244,14 @@ server <- function(input, output, session) {
       removeLayersControl() %>%
       addLayersControl(
         baseGroups = c("Topographic", "Streets","Imagery"),
-        overlayGroups= c(overlay_grp_names, "User shapefile"),
+        overlayGroups= c(overlay_grp_names, "User property"),
         options = layersControlOptions(collapsed=FALSE)
       ) %>%
       hideGroup("Farm portions") %>%
       clearControls() %>%
       addLegend("bottomright",
                 colors = c(layer_cols,"#912CEE"),
-                labels = c(overlay_grp_names, "User shapefile"),
+                labels = c(overlay_grp_names, "User property"),
                 title = "Legend",
                 opacity = opacity_cols)
 
@@ -336,7 +335,7 @@ server <- function(input, output, session) {
     if (nrow(farm_int) > 0) {
 
       farm_int <- farms %>%
-        filter(PRCL_KEY == farm_int$PRCL_KEY)
+        filter(ID == farm_int$ID)
 
       nogo_user_int <- st_intersection(farm_int, high_sens_all)
       df <- compile_species_table(nogo_user_int)
@@ -346,7 +345,7 @@ server <- function(input, output, session) {
     } else if (nrow(erf_int) > 0){
 
       erf_int <- erf_all %>%
-        filter(PRCL_KEY == erf_int$PRCL_KEY)
+        filter(ID == erf_int$ID)
 
       nogo_user_int <- st_intersection(erf_int, high_sens_all)
       df <- compile_species_table(nogo_user_int)
@@ -623,3 +622,8 @@ server <- function(input, output, session) {
 
 ## Note 5 ----
 # Create a folder called "www" in app.R directory and put images in there. Don't reference the folder as a the source, shiny will automatically look there.
+
+## Note 6 ----
+
+# In order to get this function working I would need to follow this and make manual changes to package for fix:
+  # https://github.com/bhaskarvk/leaflet.extras/issues/148

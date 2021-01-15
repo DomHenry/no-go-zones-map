@@ -110,9 +110,11 @@ body <- dashboardBody(
                 fixed = TRUE, draggable = FALSE,
                 left = "auto", bottom = "auto",
                 top = 350,
-                width = "100%", height = 70,
+                width = "100%", height = 80,
                 br(),
-                actionButton("add_cadastral", label = tags$b("Click here to add data and get started")) # Dont use HTML
+                actionButton("add_cadastral", label = tags$b("Click here to add data and get started")),# Dont use HTML
+                br(),
+                HTML(paste(HTML('&nbsp;'), HTML('&nbsp;'),HTML('&nbsp;'),"Please be patient while map loads"))
               )
             ),
             shinyjs::hidden(

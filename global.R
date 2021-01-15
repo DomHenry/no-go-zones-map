@@ -17,7 +17,7 @@ library(gt)
 ## Load data ----
 load("data_input/spatial_data_inputs.RData")
 latlongCRS <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-sgdata <- c(unique(farms$PRCL_KEY),unique(erf_all$PRCL_KEY))
+sgdata <- c(unique(farms$ID),unique(erf_all$ID))
 
 ## Increase upload file size ----
 maxsize_MB <- 30 # megabytes
@@ -229,7 +229,11 @@ compile_property_table <- function(x, prop_type){
     pivot_wider(names_from = prop,
                 values_from = value) %>%
     rename_with(., ~str_to_sentence(str_replace_all(., "_", " ")), starts_with("prop")) %>%
-    rename("Property attribute" = 1)
+    rename("Property attribute" = 1) %>%
+    mutate(`Property attribute` = c("Parcel key", "Parcel type","21 digit ID",
+                                    "Province","Major region name",
+                                    "Major region code","Parcel number",
+                                    "Portion of parcel"))
 
 }
 
