@@ -65,6 +65,8 @@ server <- function(input, output, session) {
     updateNumericInput(session, "long", "Longitude", value = NA)
     shinyjs::reset("user_shape") # Note 2
     shp_value$poly_shp <- NULL
+    shinyjs::hide("downloadData")
+
   })
 
 
@@ -273,7 +275,7 @@ server <- function(input, output, session) {
         overlayGroups= c(overlay_grp_names, "User property"),
         options = layersControlOptions(collapsed=FALSE)
       ) %>%
-      hideGroup("Farm portions") %>%
+      showGroup("Farm portions") %>%
       clearControls() %>%
       addLegend("bottomright",
                 colors = c(layer_cols,"#912CEE"),
