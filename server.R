@@ -2,14 +2,21 @@
 server <- function(input, output, session) {
 
   ## GEOMETRY PLOTTING ----
+  info(file_logger, "### START NEW SERVER SESSION ###")
 
   ### Compile base map ----
+  info(file_logger, "Start compile global_base_map")
   output$nogomap <- renderLeaflet({
     global_base_map
   })
+  info(file_logger, "End compile global_base_map")
 
   ### Render base map ----
+  info(file_logger, "Checkpoint 1")
+
   observeEvent(input$add_cadastral, {
+
+    info(file_logger, "Start render global_base_map")
 
     shinyjs::hide("cadastraldiv")
     shinyjs::show("clearcontroldiv")
@@ -21,10 +28,15 @@ server <- function(input, output, session) {
 
     })
 
+    info(file_logger, "End render global_base_map")
+
   })
+  info(file_logger, "Checkpoint 2")
 
   ### Reset map to original state ----
   observeEvent(input$map_reset,{
+
+    info(file_logger, "Start map reset")
 
     leafletProxy("nogomap") %>%
       setView(lng = 25.4015133,
@@ -66,6 +78,8 @@ server <- function(input, output, session) {
     shinyjs::reset("user_shape") # Note 2
     shp_value$poly_shp <- NULL
     shinyjs::hide("downloadData")
+    info(file_logger, "End map reset")
+
 
   })
 
@@ -142,6 +156,8 @@ server <- function(input, output, session) {
   ###  Plot user input polygon ----
   observeEvent(input$plot_footprint,{
 
+    info(file_logger, "Start user shapefile plot")
+
     if(!is.null(user_polygon())){
 
       cen <- sfc_as_cols(st_centroid(user_polygon())) %>%
@@ -180,7 +196,10 @@ server <- function(input, output, session) {
                   title = "Legend",
                   opacity = opacity_cols
         )
-        }
+    }
+
+    info(file_logger, "End user shapefile plot")
+
   })
 
 

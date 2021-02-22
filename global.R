@@ -13,9 +13,18 @@ library(leaflet.extras)
 library(leaflet.esri)
 library(leafem)
 library(gt)
+library(log4r)
+
+## Intiate logger ----
+log_file <- "nogo-map-logging.log"
+file_logger <- logger("INFO", appenders = list(file_appender(log_file),console_appender()))
+info(file_logger, "### START NEW GLOBAL SESSION ###")
 
 ## Load data ----
+info(file_logger, "Start RData import")
 load("data_input/spatial_data_inputs.RData")
+info(file_logger, "Finish RData import")
+
 latlongCRS <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 sgdata <- c(unique(farms$ID),unique(erf_all$ID))
 
@@ -26,7 +35,8 @@ options(shiny.maxRequestSize = maxsize_MB * 1024^2)
 # Profiling ----
 
 # https://lukesingham.com/shiny-r-performance-profiling/
-# profvis::profvis({ runApp(appDir = getwd())})
+# profvis::profvis({ runApp(appDir = getwd())},
+#                  prof_output = "nogo_profvis.Rprof")
 
 # renv ----
 
@@ -47,6 +57,8 @@ layer_cols <- c("#EE2C2C", "#A2CD5A", "#1E90FF", "#FFB90F")
 ## Compile base map -----
 
 ### Add basemap layers and controls ----
+info(file_logger, "Start Basemap compilation 1")
+
 global_base_map <- leaflet() %>%
   addEsriBasemapLayer(
     key = esriBasemapLayers$Topographic,
@@ -78,6 +90,7 @@ global_base_map <- leaflet() %>%
           zoom = 6)
 
 ### Add logo and draw toolbar ----
+info(file_logger, "Start Basemap compilation 2")
 global_base_map <- global_base_map %>%
   leafem::addLogo(img = "ewt_01.png", # Note 5
                   src = "remote",
@@ -101,7 +114,9 @@ global_base_map <- global_base_map %>%
                  circleMarkerOptions = FALSE,
                  circleOptions = FALSE,
                  editOptions = editToolbarOptions())
+
 ### Add cadastral and EST data ----
+info(file_logger, "Start Basemap compilation 3")
 global_base_map <- global_base_map %>%
   addLayersControl(
     baseGroups = c("Topographic",
@@ -174,6 +189,8 @@ global_base_map <- global_base_map %>%
   hideGroup("ERFs")
 
 ## Helper functions ----
+info(file_logger, "Load helper functions")
+
 set_zoom <- function(x){
 
   if(x > 50){
