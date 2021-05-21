@@ -15,6 +15,10 @@ library(leafem)
 library(gt)
 library(log4r)
 
+## Choose geom complexity
+# geom_complex = "SIMPLE"
+geom_complex = "COMPLEX"
+
 ## Intiate logger ----
 log_file <- "nogo-map-logging.log"
 file_logger <- logger("INFO", appenders = list(file_appender(log_file),console_appender()))
@@ -22,11 +26,17 @@ info(file_logger, "### START NEW GLOBAL SESSION ###")
 
 ## Load data ----
 info(file_logger, "Start RData import")
-load("data_input/spatial_data_inputs.RData")
+
+if(geom_complex == "SIMPLE"){
+  load("data_input/spatial_data_inputs_SIMPLE.RData")
+} else if (geom_complex == "COMPLEX"){
+  load("data_input/spatial_data_inputs_COMPLEX.RData")
+  }
+
 info(file_logger, "Finish RData import")
 
 latlongCRS <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-sgdata <- c(unique(farms$ID),unique(erf_all$ID))
+sgdata <- c(unique(farms$ID),unique(erfs$ID))
 
 ## Increase upload file size ----
 maxsize_MB <- 30 # megabytes
@@ -143,7 +153,7 @@ global_base_map <- global_base_map %>%
     options = pathOptions(pane = "farm_polys")
   ) %>%
   addPolygons(
-    data = erf_all,
+    data = erfs,
     popup =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
     label =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
     group = "ERFs",
@@ -156,9 +166,9 @@ global_base_map <- global_base_map %>%
     options = pathOptions(pane = "erf_polys")
   ) %>%
   addPolygons(
-    data = pa,
+    data = protect_area,
     group = "Protected areas",
-    popup = ~ cur_nme,
+    popup = ~ CUR_NME,
     fillColor = layer_cols[2],
     fillOpacity = opacity_cols,
     stroke = TRUE,
@@ -167,8 +177,8 @@ global_base_map <- global_base_map %>%
     smoothFactor = 2
   ) %>%
   addPolygons(
-    data = high_sens_all,
-    popup = ~ scntfc_,
+    data = nogo,
+    popup = ~ SENSFEAT,
     label = "No-go area",
     group = "No-go areas",
     fillColor = layer_cols[1],
@@ -186,7 +196,8 @@ global_base_map <- global_base_map %>%
             opacity = opacity_cols
   ) %>%
   hideGroup("Protected areas") %>%
-  hideGroup("ERFs")
+  hideGroup("ERFs") %>%
+  hideGroup("Farm portions")
 
 ## Helper functions ----
 info(file_logger, "Load helper functions")
@@ -217,13 +228,11 @@ compile_species_table <- function(x){
 
   x %>%
     st_drop_geometry() %>%
-    group_by(SENSFEA, THEME, SENSITI) %>%
+    group_by(SENSFEAT, THEME) %>%
     tally() %>%
-    rename(Species = SENSFEA, 'EST Theme' = THEME,
-           'EST sensistivity' = SENSITI, 'Polygon count' = n) %>%
-    mutate(Class = str_split(Species, pattern = "-")[[1]][1],
-           Species = str_split(Species, pattern = "-")[[1]][2]) %>%
-    select(Species, Class, everything()) %>%
+    rename(Species = SENSFEAT, 'EST Theme' = THEME,
+           'Polygon count' = n) %>%
+    select(Species,everything()) %>%
     ungroup()
 
 
