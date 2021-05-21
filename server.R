@@ -9,29 +9,32 @@ server <- function(input, output, session) {
   output$nogomap <- renderLeaflet({
     global_base_map
   })
+
+  outputOptions(output, "nogomap", suspendWhenHidden = FALSE)
+
   info(file_logger, "End compile global_base_map")
 
-  ### Render base map ----
-  info(file_logger, "Checkpoint 1")
-
-  observeEvent(input$add_cadastral, {
-
-    info(file_logger, "Start render global_base_map")
-
-    shinyjs::hide("cadastraldiv")
-    shinyjs::show("clearcontroldiv")
-
-    output$nogomap_base <- renderUI({
-
-      leafletOutput("nogomap", width = "100%", height = 620) %>%
-        withSpinner(type = 1, size = 1.5)
-
-    })
-
-    info(file_logger, "End render global_base_map")
-
-  })
-  info(file_logger, "Checkpoint 2")
+  # ### Render base map ----
+  # info(file_logger, "Checkpoint 1")
+  #
+  # observeEvent(input$add_cadastral, {
+  #
+  #   info(file_logger, "Start render global_base_map")
+  #
+  #   shinyjs::hide("cadastraldiv")
+  #   shinyjs::show("clearcontroldiv")
+  #
+  #   output$nogomap_base <- renderUI({
+  #
+  #     leafletOutput("nogomap", width = "100%", height = 620) %>%
+  #       withSpinner(type = 1, size = 1.5)
+  #
+  #   })
+  #
+  #   info(file_logger, "End render global_base_map")
+  #
+  # })
+  # info(file_logger, "Checkpoint 2")
 
   ### Reset map to original state ----
   observeEvent(input$map_reset,{
@@ -245,7 +248,7 @@ server <- function(input, output, session) {
     "W048C039000500001399000001" # ERF
 
     ref_farm <- which(farms$ID %in% input$sg_key)
-    ref_erf <- which(erf_all$ID %in% input$sg_key)
+    ref_erf <- which(erfs$ID %in% input$sg_key)
 
     if (all(c(length(ref_farm) == 0,length(ref_erf) == 0))) {
       prop_extract <- NULL
@@ -254,7 +257,7 @@ server <- function(input, output, session) {
       prop_extract <- farms[ref,]
     } else if (length(ref_erf) >= 1){
       ref <- ref_erf
-      prop_extract <- erf_all[ref,]
+      prop_extract <- erfs[ref,]
     }
 
     return(prop_extract)
@@ -353,7 +356,7 @@ server <- function(input, output, session) {
       need(!is.null(user_polygon()), "Please upload valid shapefile files")
     )
 
-    nogo_user_int <- st_intersection(user_polygon(), high_sens_all)
+    nogo_user_int <- st_intersection(user_polygon(), nogo)
     df <- compile_species_table(nogo_user_int)
     df <- draw_gt(df)
     return(df)
@@ -365,7 +368,7 @@ server <- function(input, output, session) {
 
     req(prop_extract())
 
-    nogo_user_int <- st_intersection(prop_extract(), high_sens_all)
+    nogo_user_int <- st_intersection(prop_extract(), nogo)
     df <- compile_species_table(nogo_user_int)
     df <- draw_gt(df)
 
@@ -377,24 +380,24 @@ server <- function(input, output, session) {
     req(user_point())
 
     farm_int <- st_intersection(farms, user_point())
-    erf_int <- st_intersection(erf_all, user_point())
+    erf_int <- st_intersection(erfs, user_point())
 
     if (nrow(farm_int) > 0) {
 
       farm_int <- farms %>%
         filter(ID == farm_int$ID)
 
-      nogo_user_int <- st_intersection(farm_int, high_sens_all)
+      nogo_user_int <- st_intersection(farm_int, nogo)
       df <- compile_species_table(nogo_user_int)
       df <- draw_gt(df)
 
 
     } else if (nrow(erf_int) > 0){
 
-      erf_int <- erf_all %>%
+      erf_int <- erfs %>%
         filter(ID == erf_int$ID)
 
-      nogo_user_int <- st_intersection(erf_int, high_sens_all)
+      nogo_user_int <- st_intersection(erf_int, nogo)
       df <- compile_species_table(nogo_user_int)
       df <- draw_gt(df)
     }
@@ -432,7 +435,7 @@ server <- function(input, output, session) {
       summarise(geometry = st_combine(geometry)) %>%
       st_cast("POLYGON")
 
-    nogo_user_int <- st_intersection(shp, high_sens_all)
+    nogo_user_int <- st_intersection(shp, nogo)
     df <- compile_species_table(nogo_user_int)
     df <- draw_gt(df)
     return(df)
@@ -451,7 +454,7 @@ server <- function(input, output, session) {
     )
 
     farm_int <- st_intersection(user_polygon(),farms)
-    erf_int <- st_intersection(user_polygon(),erf_all)
+    erf_int <- st_intersection(user_polygon(),erfs)
 
     if (nrow(farm_int) > 0) {
       df <- compile_property_table(farm_int,"Farm_field")
@@ -472,7 +475,7 @@ server <- function(input, output, session) {
     req(user_point())
 
     farm_int <- st_intersection(farms, user_point())
-    erf_int <- st_intersection(erf_all, user_point())
+    erf_int <- st_intersection(erfs, user_point())
 
     if (nrow(farm_int) > 0) {
       df <- compile_property_table(farm_int,"Farm_field")
@@ -504,7 +507,7 @@ server <- function(input, output, session) {
       st_cast("POLYGON")
 
     farm_int <- st_intersection(shp,farms)
-    erf_int <- st_intersection(shp,erf_all)
+    erf_int <- st_intersection(shp,erfs)
 
 
     if (nrow(farm_int) > 0) {
