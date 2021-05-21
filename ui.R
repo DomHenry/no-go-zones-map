@@ -58,20 +58,20 @@ body <- dashboardBody(
             status = "primary",
             useShinyjs(), # Add this to allow shinyjs functions to work in server
             fileInput("user_shape",
-              HTML("Upload shapefile or KML: <br/> <em> (.shp, .shx, .dbf,
+                      HTML("Upload shapefile or KML: <br/> <em> (.shp, .shx, .dbf,
                            and .prj files are all <br/> required for shapefile upload)</em>"),
-              multiple = TRUE,
-              accept = c(
-                ".kml",
-                ".shx", ".shp", ".sbn", ".sbx", ".dbf", ".prj"
-              )
+                      multiple = TRUE,
+                      accept = c(
+                        ".kml",
+                        ".shx", ".shp", ".sbn", ".sbx", ".dbf", ".prj"
+                      )
             ),
             actionButton("plot_footprint", "Plot shapefile or KML", style = blue_button),
             tags$hr(),
             selectizeInput("sg_key", "Search with 21 digit SG key:",
                            choices = c("Enter SG key" = "", sgdata),
                            options=list(create=FALSE, selectOnTab = TRUE)
-                           ),
+            ),
             actionButton("search_prop", "Plot property", style = blue_button),
             br(),
             tags$hr(),
@@ -80,7 +80,7 @@ body <- dashboardBody(
             numericInput("lat", "Latitude", value = -30.375),
             numericInput("long", "Longitude", value = 30.6858),
             actionButton("add_point", "Add point",
-              style = blue_button
+                         style = blue_button
             )
           )
         ),
@@ -88,33 +88,19 @@ body <- dashboardBody(
           width = 9,
           box(
             title = NULL, width = NULL, solidHeader = TRUE,
-            uiOutput(outputId = "nogomap_base"),
-            shinyjs::hidden(
-              div(
-                id = "clearcontroldiv",
-                absolutePanel(
-                  id = "clear_control", class = "panel panel-default",
-                  fixed = TRUE, draggable = FALSE,
-                  top = 350, right = 30, left = "auto", bottom = "auto",
-                  width = "auto", height = "auto",
-                  actionButton("map_reset", "Clear map inputs")
-                )
-              )
+            div(
+              id = "nogomapdiv",
+              leafletOutput("nogomap", width = "100%", height = 620) %>%
+                withSpinner(type = 1, size = 1.5)
             ),
             div(
-              id = "cadastraldiv",
+              id = "clearcontroldiv",
               absolutePanel(
-                id = "add_data", class = "panel panel-default",
-                style = "padding-left:300px;
-                  background-color: #9ACD32; opacity: 0.9",
+                id = "clear_control", class = "panel panel-default",
                 fixed = TRUE, draggable = FALSE,
-                left = "auto", bottom = "auto",
-                top = 350,
-                width = "100%", height = 80,
-                br(),
-                actionButton("add_cadastral", label = tags$b("Click here to add data and get started")),# Dont use HTML
-                br(),
-                HTML(paste(HTML('&nbsp;'), HTML('&nbsp;'),HTML('&nbsp;'),"Please be patient while map loads"))
+                top = 350, right = 30, left = "auto", bottom = "auto",
+                width = "auto", height = "auto",
+                actionButton("map_reset", "Clear map inputs")
               )
             ),
             shinyjs::hidden(
@@ -126,11 +112,11 @@ body <- dashboardBody(
                   top = 350, right = 720, left = "auto", bottom = "auto",
                   width = "auto", height = "auto",
                   downloadButton("downloadData", "Download hand-drawn shape")
-                  )
                 )
               )
             )
           )
+        )
       )
     ),
     tabItem(
