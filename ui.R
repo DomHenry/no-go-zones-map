@@ -90,7 +90,7 @@ body <- dashboardBody(
             title = NULL, width = NULL, solidHeader = TRUE,
             div(
               id = "nogomapdiv",
-              leafletOutput("nogomap", width = "100%", height = 620) %>%
+              leafglOutput("nogomap", width = "100%", height = 620) %>%
                 withSpinner(type = 1, size = 1.5)
             ),
             div(

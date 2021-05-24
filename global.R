@@ -14,9 +14,10 @@ library(leaflet.esri)
 library(leafem)
 library(gt)
 library(log4r)
+library(leafgl)
 
 ## Choose geom complexity
-# geom_complex = "SIMPLE"
+# geom_complex = "SIMPLE" # problems with {leafgl}
 geom_complex = "COMPLEX"
 
 ## Intiate logger ----
@@ -31,7 +32,13 @@ if(geom_complex == "SIMPLE"){
   load("data_input/spatial_data_inputs_SIMPLE.RData")
 } else if (geom_complex == "COMPLEX"){
   load("data_input/spatial_data_inputs_COMPLEX.RData")
-  }
+}
+
+# Convert from Multi to Single part polygon
+nogo <- st_cast(nogo, "POLYGON")
+erfs <- st_cast(erfs, "POLYGON")
+farms <- st_cast(farms, "POLYGON")
+protect_area <- st_cast(protect_area, "POLYGON")
 
 info(file_logger, "Finish RData import")
 
@@ -59,7 +66,7 @@ options(shiny.maxRequestSize = maxsize_MB * 1024^2)
 
 
 # Leaflet map settings ----
-opacity_cols <- 0.5
+opacity_cols <- 1
 overlay_grp_names <-  c("No-go areas","Protected areas","Farm portions","ERFs")
 layer_cols <- c("#EE2C2C", "#A2CD5A", "#1E90FF", "#FFB90F")
 # ("firebrick2", "darkolivegreen3", "dodgerblue", "darkgoldenrod1")
@@ -139,20 +146,20 @@ global_base_map <- global_base_map %>%
   addMapPane("farm_polys", zIndex = 410) %>% # Farms plot beneath no-go polys
   addMapPane("erf_polys", zIndex = 415) %>%
   addMapPane("nogo_polys", zIndex = 420) %>% # No-go plot above farms
-  addPolygons(
+  addGlPolygons(
     data = farms,
     group = "Farm portions",
     popup =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
     label =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
     fillColor = layer_cols[3],
     fillOpacity = opacity_cols,
-    stroke = TRUE,
-    color = "black",
-    weight = 0.8,
-    smoothFactor = 3,
+    # stroke = TRUE,
+    # color = "black",
+    # weight = 0.8,
+    # smoothFactor = 3,
     options = pathOptions(pane = "farm_polys")
   ) %>%
-  addPolygons(
+  addGlPolygons(
     data = erfs,
     popup =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
     label =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
@@ -161,32 +168,32 @@ global_base_map <- global_base_map %>%
     fillOpacity = opacity_cols,
     stroke = TRUE,
     color = "black",
-    weight = 0.8,
-    smoothFactor = 3,
+    # weight = 0.8,
+    # smoothFactor = 3,
     options = pathOptions(pane = "erf_polys")
   ) %>%
-  addPolygons(
+  addGlPolygons(
     data = protect_area,
     group = "Protected areas",
     popup = ~ CUR_NME,
     fillColor = layer_cols[2],
-    fillOpacity = opacity_cols,
-    stroke = TRUE,
-    color = "black",
-    weight = 0.8,
-    smoothFactor = 2
+    fillOpacity = opacity_cols#,
+    # stroke = TRUE,
+    # color = "black",
+    # weight = 0.8,
+    # smoothFactor = 2
   ) %>%
-  addPolygons(
+  addGlPolygons(
     data = nogo,
     popup = ~ SENSFEAT,
     label = "No-go area",
     group = "No-go areas",
     fillColor = layer_cols[1],
     fillOpacity = opacity_cols,
-    stroke = TRUE,
-    color = "black",
-    weight = 0.8,
-    smoothFactor = 1.5,
+    # stroke = TRUE,
+    # color = "black",
+    # weight = 0.8,
+    # smoothFactor = 1.5,
     options = pathOptions(pane = "nogo_polys")
   ) %>%
   addLegend("bottomright",
@@ -194,10 +201,10 @@ global_base_map <- global_base_map %>%
             labels = c("No-Go","PA","Farm portion","ERF"),
             title = "Legend",
             opacity = opacity_cols
-  ) %>%
-  hideGroup("Protected areas") %>%
-  hideGroup("ERFs") %>%
-  hideGroup("Farm portions")
+  ) #%>%
+  # hideGroup("Protected areas") %>%
+  # hideGroup("ERFs") %>%
+  # hideGroup("Farm portions")
 
 ## Helper functions ----
 info(file_logger, "Load helper functions")
