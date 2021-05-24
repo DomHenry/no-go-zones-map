@@ -16,8 +16,10 @@ library(gt)
 library(log4r)
 
 ## Choose geom complexity
-# geom_complex = "SIMPLE"
-geom_complex = "COMPLEX"
+geom_complex = "SIMPLE"
+# geom_complex = "COMPLEX"
+
+latlongCRS <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 ## Intiate logger ----
 log_file <- "nogo-map-logging.log"
@@ -35,7 +37,6 @@ if(geom_complex == "SIMPLE"){
 
 info(file_logger, "Finish RData import")
 
-latlongCRS <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 sgdata <- c(unique(farms$ID),unique(erfs$ID))
 
 ## Increase upload file size ----
@@ -160,11 +161,11 @@ global_base_map <- global_base_map %>%
     fillColor = layer_cols[4],
     fillOpacity = opacity_cols,
     stroke = TRUE,
-    color = "black",
-    weight = 0.8,
-    smoothFactor = 3,
-    options = pathOptions(pane = "erf_polys")
-  ) %>%
+     color = "black",
+     weight = 0.8,
+     smoothFactor = 3,
+     options = pathOptions(pane = "erf_polys")
+   ) %>%
   addPolygons(
     data = protect_area,
     group = "Protected areas",
@@ -174,7 +175,7 @@ global_base_map <- global_base_map %>%
     stroke = TRUE,
     color = "black",
     weight = 0.8,
-    smoothFactor = 2
+    smoothFactor = 3
   ) %>%
   addPolygons(
     data = nogo,
