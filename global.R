@@ -15,10 +15,6 @@ library(leafem)
 library(gt)
 library(log4r)
 
-## Choose geom complexity
-geom_complex = "SIMPLE"
-# geom_complex = "COMPLEX"
-
 latlongCRS <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 ## Intiate logger ----
@@ -29,11 +25,7 @@ info(file_logger, "### START NEW GLOBAL SESSION ###")
 ## Load data ----
 info(file_logger, "Start RData import")
 
-if(geom_complex == "SIMPLE"){
-  load("data_input/spatial_data_inputs_SIMPLE.RData")
-} else if (geom_complex == "COMPLEX"){
-  load("data_input/spatial_data_inputs_COMPLEX.RData")
-  }
+load("data_input/spatial_data_inputs_COMPLEX.RData")
 
 info(file_logger, "Finish RData import")
 
@@ -110,7 +102,7 @@ global_base_map <- global_base_map %>%
                   offset.x = 5,
                   offset.y = 40,
                   width = 70) %>%
-  addResetMapButton() %>%
+  leaflet.extras::addResetMapButton() %>%
   leafem::addMouseCoordinates() %>%
   addDrawToolbar(polylineOptions = FALSE,
                  polygonOptions = drawPolygonOptions(
@@ -139,55 +131,58 @@ global_base_map <- global_base_map %>%
   ) %>%
   addMapPane("farm_polys", zIndex = 410) %>% # Farms plot beneath no-go polys
   addMapPane("erf_polys", zIndex = 415) %>%
+  addMapPane("protect_area_polys", zIndex = 417) %>%
   addMapPane("nogo_polys", zIndex = 420) %>% # No-go plot above farms
-  addPolygons(
-    data = farms,
+  leafem:::addFgb(
+    file = "fgb_data/farms/farms.fgb",
     group = "Farm portions",
-    popup =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
-    label =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
+    label =  "MAJ_REGION",
+    popup = TRUE,
     fillColor = layer_cols[3],
+    fill = TRUE,
     fillOpacity = opacity_cols,
     stroke = TRUE,
     color = "black",
     weight = 0.8,
-    smoothFactor = 3,
     options = pathOptions(pane = "farm_polys")
   ) %>%
-  addPolygons(
-    data = erfs,
-    popup =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
-    label =  ~ str_c(MAJ_REGION, " - PARCEL: ",PARCEL_NO),
+  leafem:::addFgb(
+    file = "fgb_data/erfs/erfs.fgb",
     group = "ERFs",
+    label = "MAJ_REGION",
+    popup = TRUE,
     fillColor = layer_cols[4],
-    fillOpacity = opacity_cols,
-    stroke = TRUE,
-     color = "black",
-     weight = 0.8,
-     smoothFactor = 3,
-     options = pathOptions(pane = "erf_polys")
-   ) %>%
-  addPolygons(
-    data = protect_area,
-    group = "Protected areas",
-    popup = ~ CUR_NME,
-    fillColor = layer_cols[2],
+    fill = TRUE,
     fillOpacity = opacity_cols,
     stroke = TRUE,
     color = "black",
     weight = 0.8,
-    smoothFactor = 3
+    options = pathOptions(pane = "erf_polys")
+   ) %>%
+  leafem:::addFgb(
+    file = "fgb_data/protect_area/protect_area.fgb",
+    group = "Protected areas",
+    label =  "CUR_NME",
+    popup =  TRUE,
+    fillColor = layer_cols[2],
+    fill = TRUE,
+    fillOpacity = opacity_cols,
+    stroke = TRUE,
+    color = "black",
+    weight = 0.8,
+    options = pathOptions(pane = "protect_area_polys")
   ) %>%
-  addPolygons(
-    data = nogo,
-    popup = ~ SENSFEAT,
+  leafem:::addFgb(
+    file = "fgb_data/nogo/nogo.fgb",
+    popup = "SENSFEAT",
     label = "No-go area",
     group = "No-go areas",
     fillColor = layer_cols[1],
+    fill = TRUE,
     fillOpacity = opacity_cols,
     stroke = TRUE,
     color = "black",
     weight = 0.8,
-    smoothFactor = 1.5,
     options = pathOptions(pane = "nogo_polys")
   ) %>%
   addLegend("bottomright",
@@ -318,6 +313,16 @@ draw_gt_property <- function(x){
       )
     )
 
+}
+
+sfc_as_cols <- function(x, names = c("x","y")) {
+  stopifnot(inherits(x,"sf") && inherits(sf::st_geometry(x),"sfc_POINT"))
+  ret <- sf::st_coordinates(x)
+  ret <- tibble::as_tibble(ret)
+  stopifnot(length(names) == ncol(ret))
+  x <- x[ , !names(x) %in% names]
+  ret <- setNames(ret,names)
+  dplyr::bind_cols(x,ret)
 }
 
 
