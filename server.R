@@ -10,31 +10,10 @@ server <- function(input, output, session) {
     global_base_map
   })
 
+  ### Render base map in the background ----
   outputOptions(output, "nogomap", suspendWhenHidden = FALSE)
 
   info(file_logger, "End compile global_base_map")
-
-  # ### Render base map ----
-  # info(file_logger, "Checkpoint 1")
-  #
-  # observeEvent(input$add_cadastral, {
-  #
-  #   info(file_logger, "Start render global_base_map")
-  #
-  #   shinyjs::hide("cadastraldiv")
-  #   shinyjs::show("clearcontroldiv")
-  #
-  #   output$nogomap_base <- renderUI({
-  #
-  #     leafletOutput("nogomap", width = "100%", height = 620) %>%
-  #       withSpinner(type = 1, size = 1.5)
-  #
-  #   })
-  #
-  #   info(file_logger, "End render global_base_map")
-  #
-  # })
-  # info(file_logger, "Checkpoint 2")
 
   ### Reset map to original state ----
   observeEvent(input$map_reset,{
