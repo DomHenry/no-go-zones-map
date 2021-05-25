@@ -1,6 +1,7 @@
 ## UI ----
 header <- dashboardHeader(
-  title = "No-Go Zones Map"
+  title = "Biodiveristy No-Go Map",
+  titleWidth = 250
 )
 
 ## Sidebar ----
@@ -34,7 +35,7 @@ body <- dashboardBody(
           tabBox(
             id='tabvals',
             width=NULL,
-            tabPanel(title = "What is a no-go area?",
+            tabPanel(title = "What is a biodiveristy no-go area?",
                      includeMarkdown("data_input/Nogo_background_text.Rmd"),
                      img(src = "ewt_01.png", height = "100px"),
                      value=1),
