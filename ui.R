@@ -1,20 +1,21 @@
 ## UI ----
 header <- dashboardHeader(
-  title = "Biodiveristy No-Go Map",
-  titleWidth = 250
+  title = "Threatend Species No-Go Map",
+  titleWidth = 320
 )
 
 ## Sidebar ----
 sidebar <- dashboardSidebar(
   sidebarMenu(
-    menuItem("Welcome", tabName = "welcome", icon = icon("info-circle"),
-             selected = TRUE),
-    menuItem("Interactive map", tabName = "int_map", icon = icon("map-marked-alt"),
-             selected = FALSE),
-    menuItem("Data output: Shapefile or KML", tabName = "data_output_01", icon = icon("table")),
-    menuItem("Data output: SG key", tabName = "data_output_02",icon = icon("table")),
-    menuItem("Data output: Lat/Long point", tabName = "data_output_03",icon = icon("table")),
-    menuItem("Data output: Hand-drawn polygon", tabName = "data_output_04",icon = icon("table")),
+    menuItem("Welcome",
+      tabName = "welcome", icon = icon("info-circle"),
+      selected = TRUE
+    ),
+    menuItem("Interactive map",
+      tabName = "int_map", icon = icon("map-marked-alt"),
+      selected = FALSE
+    ),
+    menuItem("Data table outputs", tabName = "tables", icon = icon("table")),
     menuItem("Help", tabName = "help", icon = icon("question-circle"))
   )
 )
@@ -24,27 +25,74 @@ blue_button <- "color: #fff; background-color: #337ab7; border-color: #2e6da4"
 # More buttons options
 # https://getbootstrap.com/docs/4.0/components/buttons/
 
+tab_font <- "font-size:16px"
+
 ## Body ----
 body <- dashboardBody(
+  tags$head(
+    tags$style(type='text/css',
+               ".nav-tabs {font-size: 15px; font-weight: bold}
+               .main-sidebar {font-size: 16px;}")),
   tabItems(
     tabItem(
       tabName = "welcome",
       fluidRow(
         column(
-          width = 9,
+          width = 10,
           tabBox(
-            id='tabvals',
-            width=NULL,
-            tabPanel(title = "What is a biodiveristy no-go area?",
-                     includeMarkdown("data_input/Nogo_background_text.Rmd"),
-                     img(src = "ewt_01.png", height = "100px"),
-                     value=1),
-            tabPanel(title ="How to use the interactive map",
-                     "Add text",
-                     value=2),
-            tabPanel(title ="More resources",
-                     "Add more text",
-                     value=3)
+            id = "tabvals",
+            width = NULL,
+            tabPanel(
+              title = "Background",
+              style = tab_font,
+              br(),
+              includeMarkdown("data_input/01_background.Rmd"),
+              # img(src = "ewt_01.png", height = "100px"),
+              value = 1
+            ),
+            tabPanel(
+              title = "Purpose",
+              style = tab_font,
+              br(),
+              includeMarkdown("data_input/02_purpose.Rmd"),
+              value = 2
+            ),
+            tabPanel(
+              title = "How are no-go areas defined?",
+              style = tab_font,
+              br(),
+              includeMarkdown("data_input/03_defined.Rmd"),
+              img(src = "Infographic_clipped.png", height = "500px"),
+              value = 2
+            ),
+            tabPanel(
+              title = "Species summaries",
+              style = tab_font,
+              br(),
+              includeMarkdown("data_input/04_species.Rmd"),
+              value = 3
+            ),
+            tabPanel(
+              title = "How it works",
+              style = tab_font,
+              br(),
+              includeMarkdown("data_input/05_how it works.Rmd"),
+              value = 4
+            ),
+            tabPanel(
+              title = "How can you contribute?",
+              style = tab_font,
+              br(),
+              includeMarkdown("data_input/06_contribute.Rmd"),
+              value = 5
+            ),
+            tabPanel(
+              title = "Resources",
+              style = tab_font,
+              br(),
+              includeMarkdown("data_input/07_resources.Rmd"),
+              value = 6
+            )
           )
         )
       )
@@ -59,19 +107,19 @@ body <- dashboardBody(
             status = "primary",
             useShinyjs(), # Add this to allow shinyjs functions to work in server
             fileInput("user_shape",
-                      HTML("Upload shapefile or KML: <br/> <em> (.shp, .shx, .dbf,
+              HTML("Upload shapefile or KML: <br/> <em> (.shp, .shx, .dbf,
                            and .prj files are all <br/> required for shapefile upload)</em>"),
-                      multiple = TRUE,
-                      accept = c(
-                        ".kml",
-                        ".shx", ".shp", ".sbn", ".sbx", ".dbf", ".prj"
-                      )
+              multiple = TRUE,
+              accept = c(
+                ".kml",
+                ".shx", ".shp", ".sbn", ".sbx", ".dbf", ".prj"
+              )
             ),
             actionButton("plot_footprint", "Plot shapefile or KML", style = blue_button),
             tags$hr(),
             selectizeInput("sg_key", "Search with 21 digit SG key:",
-                           choices = c("Enter SG key" = "", sgdata),
-                           options=list(create=FALSE, selectOnTab = TRUE)
+              choices = c("Enter SG key" = "", sgdata),
+              options = list(create = FALSE, selectOnTab = TRUE)
             ),
             actionButton("search_prop", "Plot property", style = blue_button),
             br(),
@@ -81,7 +129,7 @@ body <- dashboardBody(
             numericInput("lat", "Latitude", value = -30.375),
             numericInput("long", "Longitude", value = 30.6858),
             actionButton("add_point", "Add point",
-                         style = blue_button
+              style = blue_button
             )
           )
         ),
@@ -121,115 +169,109 @@ body <- dashboardBody(
       )
     ),
     tabItem(
-      tabName = "data_output_01",
+      tabName = "tables",
       fluidRow(
-        box(
-          # title = "Species data - shapefile or KML",
-          title = "Species data",
-          width = 8, solidHeader = TRUE, status = "primary",
-          gt_output(outputId = "sens_feat_table_user"),
-          collapsible = TRUE,
-          br(),
-          downloadButton(outputId = "download_species_01", label = "Download species data")
-        )
-      ),
-      fluidRow(
-        box(
-          # title = "Farm/ERF property data - shapefile or KML",
-          title = "Property data",
-          width = 12, solidHeader = TRUE, status = "primary",
-          collapsible = TRUE,
-          gt_output("property_table_user"),
-          br(),
-          downloadButton(outputId = "download_property_01", label = "Download property data")
-        )
-      )
-    ),
-
-    tabItem(
-      tabName = "data_output_02",
-      fluidRow(
-        box(
-          # title = "Species data - SG code",
-          title = "Species data",
-          width = 8, solidHeader = TRUE, status = "success",
-          collapsible = TRUE,
-          gt_output("sens_feat_table_sg"),
-          br(),
-          downloadButton(outputId = "download_species_02", label = "Download species data")
-        )
-      ),
-      fluidRow(
-        box(
-          # title = "Farm/ERF property data - SG code",
-          title = "Property data",
-          width = 12, solidHeader = TRUE, status = "success",
-          collapsible = TRUE,
-          gt_output("property_table_sg"),
-          br(),
-          downloadButton(outputId = "download_property_02", label = "Download property data")
-        )
-      )
-    ),
-
-    tabItem(
-      tabName = "data_output_03",
-      fluidRow(
-        box(
-          # title = "Species data - Lat/Long point",
-          title = "Species data",
-          width = 8, solidHeader = TRUE, status = "warning",
-          collapsible = TRUE,
-          gt_output("sens_feat_table_point"),
-          br(),
-          downloadButton(outputId = "download_species_03", label = "Download species data")
-        )
-      ),
-      fluidRow(
-        box(
-          # title = "Farm/ERF property data - Lat/Long point",
-          title = "Property data",
-          width = 12, solidHeader = TRUE, status = "warning",
-          collapsible = TRUE,
-          gt_output("property_table_point"),
-          br(),
-          downloadButton(outputId = "download_property_03", label = "Download property data")
-        )
-      )
-    ),
-
-    tabItem(
-      tabName = "data_output_04",
-      fluidRow(
-        box(
-          # title = "Species data - hand drawn polygon",
-          title = "Species data",
-          width = 8, solidHeader = TRUE, status = "danger",
-          # height = 200,
-          collapsible = TRUE,
-          gt_output("sens_feat_table_hand"),
-          br(),
-          downloadButton(outputId = "download_species_04", label = "Download species data")
-        )
-      ),
-      fluidRow(
-        box(
-          # title = "Farm/ERF property data - hand drawn polygon",
-          title = "Property data",
-          width = 12, solidHeader = TRUE, status = "danger",
-          collapsible = TRUE,
-          gt_output("property_table_hand"),
-          br(),
-          downloadButton(outputId = "download_property_04", label = "Download property data")
+        column(
+          width = 9,
+          tabBox(
+            id = "output_vals",
+            width = NULL,
+            tabPanel(
+              title = "Shapefile/KML",
+              value = 1,
+              fluidRow(
+                box(
+                  title = "Species", width = 12, collapsible = TRUE,
+                  solidHeader = TRUE, status = "success",
+                  gt_output(outputId = "sens_feat_table_user"),
+                  br(),
+                  downloadButton(outputId = "download_species_01", label = "Download species data")
+                )
+              ),
+              fluidRow(
+                box(
+                title = "Property", width = 12, collapsible = TRUE,
+                solidHeader = TRUE, status = "success",
+                gt_output("property_table_user"),
+                br(),
+                downloadButton(outputId = "download_property_01", label = "Download property data")
+              ))
+            ),
+            tabPanel(
+              title = "SG key",
+              value = 2,
+              fluidRow(
+                box(
+                  title = "Species", width = 12, collapsible = TRUE,
+                  solidHeader = TRUE, status = "success",
+                  gt_output("sens_feat_table_sg"),
+                  br(),
+                  downloadButton(outputId = "download_species_02", label = "Download species data")
+                )
+              ),
+              fluidRow(
+                box(
+                  title = "Property", width = 12, collapsible = TRUE,
+                  solidHeader = TRUE, status = "success",
+                  gt_output("property_table_sg"),
+                  br(),
+                  downloadButton(outputId = "download_property_02", label = "Download property data")
+                )
+              )
+            ),
+            tabPanel(
+              title = "Point (latitude & longitude)",
+              value = 3,
+              fluidRow(
+                box(
+                  title = "Species", width = 12, collapsible = TRUE,
+                  solidHeader = TRUE, status = "success",
+                  gt_output("sens_feat_table_point"),
+                  br(),
+                  downloadButton(outputId = "download_species_03", label = "Download species data")
+                )
+              ),
+              fluidRow(
+                box(
+                  title = "Properties", width = 12, collapsible = TRUE,
+                  solidHeader = TRUE, status = "success",
+                  gt_output("property_table_point"),
+                  br(),
+                  downloadButton(outputId = "download_property_03", label = "Download property data")
+                )
+              )
+            ),
+            tabPanel(
+              title = "Hand drawn polygon",
+              value = 4,
+              fluidRow(
+                box(
+                  title = "Species", width = 12, collapsible = TRUE,
+                  solidHeader = TRUE, status = "success",
+                  gt_output("sens_feat_table_hand"),
+                  br(),
+                  downloadButton(outputId = "download_species_04", label = "Download species data")
+                )
+              ),
+              fluidRow(
+                box(
+                  title = "Property", width = 12, collapsible = TRUE,
+                  solidHeader = TRUE, status = "success",
+                  gt_output("property_table_hand"),
+                  br(),
+                  downloadButton(outputId = "download_property_04", label = "Download property data")
+                )
+              )
+            )
+          )
         )
       )
     ),
 
     tabItem(
       tabName = "help",
-      h2("Help to come"),
-      h3("EST: https://screening.environment.gov.za/screeningtool/#/pages/welcome"),
-      h3("Support: science@ewt.org.za")
+      h2("Suggestions? Queries? Bugs? Need help?"),
+      h3("Contact us on science@ewt.org.za")
     )
   )
 )
