@@ -17,39 +17,13 @@ library(log4r)
 
 latlongCRS <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
-## Intiate logger ----
-log_file <- "nogo-map-logging.log"
-file_logger <- logger("INFO", appenders = list(file_appender(log_file),console_appender()))
-info(file_logger, "### START NEW GLOBAL SESSION ###")
-
 ## Load data ----
-info(file_logger, "Start RData import")
-
-load("data_input/spatial_data_inputs_COMPLEX.RData")
-
-info(file_logger, "Finish RData import")
-
+load("data_input/spatial_data_inputs.RData")
 sgdata <- c(unique(farms$ID),unique(erfs$ID))
 
 ## Increase upload file size ----
 maxsize_MB <- 30 # megabytes
 options(shiny.maxRequestSize = maxsize_MB * 1024^2)
-
-# Profiling ----
-
-# https://lukesingham.com/shiny-r-performance-profiling/
-# profvis::profvis({ runApp(appDir = getwd())},
-#                  prof_output = "nogo_profvis.Rprof")
-
-# renv ----
-
-# renv::init()
-# renv::snapshot()
-# renv::restore()
-# Use renv::history() to view past versions of renv.lock that have been committed to your repository
-# Use renv::revert() to pull out an old version of renv.lock based on the previously-discovered commit
-# pkg_check <- installed.packages()
-
 
 # Leaflet map settings ----
 opacity_cols <- 0.5
@@ -60,8 +34,6 @@ layer_cols <- c("#EE2C2C", "#A2CD5A", "#1E90FF", "#FFB90F")
 ## Compile base map -----
 
 ### Add basemap layers and controls ----
-info(file_logger, "Start Basemap compilation 1")
-
 global_base_map <- leaflet() %>%
   addEsriBasemapLayer(
     key = esriBasemapLayers$Topographic,
@@ -93,7 +65,6 @@ global_base_map <- leaflet() %>%
           zoom = 6)
 
 ### Add logo and draw toolbar ----
-info(file_logger, "Start Basemap compilation 2")
 global_base_map <- global_base_map %>%
   leafem::addLogo(img = "ewt_01.png", # Note 5
                   src = "remote",
@@ -119,7 +90,6 @@ global_base_map <- global_base_map %>%
                  editOptions = editToolbarOptions())
 
 ### Add cadastral and EST data ----
-info(file_logger, "Start Basemap compilation 3")
 global_base_map <- global_base_map %>%
   addLayersControl(
     baseGroups = c("Topographic",
@@ -136,8 +106,8 @@ global_base_map <- global_base_map %>%
   leafem:::addFgb(
     file = "fgb_data/farms/farms.fgb",
     group = "Farm portions",
-    label =  "MAJ_REGION",
-    popup = TRUE,
+    label =  "leaf_popup",
+    popup = "leaf_popup",
     fillColor = layer_cols[3],
     fill = TRUE,
     fillOpacity = opacity_cols,
@@ -149,8 +119,8 @@ global_base_map <- global_base_map %>%
   leafem:::addFgb(
     file = "fgb_data/erfs/erfs.fgb",
     group = "ERFs",
-    label = "MAJ_REGION",
-    popup = TRUE,
+    label = "leaf_popup",
+    popup = "leaf_popup",
     fillColor = layer_cols[4],
     fill = TRUE,
     fillOpacity = opacity_cols,
@@ -162,8 +132,8 @@ global_base_map <- global_base_map %>%
   leafem:::addFgb(
     file = "fgb_data/protect_area/protect_area.fgb",
     group = "Protected areas",
-    label =  "CUR_NME",
-    popup =  TRUE,
+    label = "leaf_popup",
+    popup = "leaf_popup",
     fillColor = layer_cols[2],
     fill = TRUE,
     fillOpacity = opacity_cols,
@@ -196,8 +166,6 @@ global_base_map <- global_base_map %>%
   hideGroup("Farm portions")
 
 ## Helper functions ----
-info(file_logger, "Load helper functions")
-
 set_zoom <- function(x){
 
   if(x > 50){
@@ -264,7 +232,7 @@ draw_gt <- function(x){
   x %>%
     gt() %>%
     tab_header(
-      title = md("List of species flagged in No-Go property"),
+      title = md("List of species flagged in no-go property"),
       subtitle = ""
     ) %>%
     tab_footnote(footnote = "Environmental Screening Tool",
@@ -289,7 +257,7 @@ draw_gt_property <- function(x){
   x %>%
     gt() %>%
     tab_header(
-      title = md("List of properties that intersect with species No-go polygons"),
+      title = md("List of properties that intersect with species no-go polygons"),
       subtitle = ""
     ) %>%
     tab_style(
