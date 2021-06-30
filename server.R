@@ -546,6 +546,13 @@ server <- function(input, output, session) {
     expr = prop_df_hand(),
     align = "left"
   )
+  # TABLE: Species summary ----
+
+  output$spp_summary_table <- render_gt(
+    expr = species_summary_table,
+    align = "left"
+  )
+
 
   # DOWNLOADS ----
   output$download_species_01 <- downloadHandler(
@@ -618,6 +625,15 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       write.csv(prop_df_hand(), file, row.names = FALSE)
+    }
+  )
+
+  output$download_species_list <- downloadHandler(
+    filename = function() {
+     "no-go species list.csv"
+    },
+    content = function(file) {
+      file.copy("data_input/nogo_species_list.csv", file)
     }
   )
 }
