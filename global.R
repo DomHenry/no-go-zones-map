@@ -293,4 +293,10 @@ sfc_as_cols <- function(x, names = c("x","y")) {
   dplyr::bind_cols(x,ret)
 }
 
-
+species_summary_table <- spp_list %>%
+  group_by(THEME, CLASS) %>%
+  tally() %>%
+  rename(Theme = THEME, `Class or taxa` = CLASS, `Number of species` = n) %>%
+  ungroup() %>%
+  mutate(`Class or taxa` = ifelse(is.na(`Class or taxa`), "-", `Class or taxa`)) %>%
+  gt::gt(.)
