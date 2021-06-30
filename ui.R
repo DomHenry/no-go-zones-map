@@ -6,11 +6,11 @@ header <- dashboardHeader(
 
 ## Sidebar ----
 sidebar <- dashboardSidebar(
+  width = 350,
   sidebarMenu(
     menuItem("Welcome",
       tabName = "welcome", icon = icon("info-circle"),
-      selected = TRUE
-    ),
+      selected = TRUE    ),
     menuItem("Interactive map",
       tabName = "int_map", icon = icon("map-marked-alt"),
       selected = FALSE
@@ -70,6 +70,9 @@ body <- dashboardBody(
               style = tab_font,
               br(),
               includeMarkdown("data_input/04_species.Rmd"),
+              gt_output("spp_summary_table"),
+              br(),
+              downloadButton("download_species_list", "Download species list"),
               value = 3
             ),
             tabPanel(
@@ -124,12 +127,35 @@ body <- dashboardBody(
             actionButton("search_prop", "Plot property", style = blue_button),
             br(),
             tags$hr(),
-            tags$b("Enter latitude and longitude:"),
+            tags$b("Enter point (decimal degrees):"),
             tags$p(),
-            numericInput("lat", "Latitude", value = -30.375),
-            numericInput("long", "Longitude", value = 30.6858),
+            fillRow(
+              height = "100%", width = "100%", flex = 1,
+              numericInput("lat", "Latitude", value = -30.375),
+              numericInput("long", "Longitude", value = 30.6858)
+              ),
+            br(),
+            br(),
+            br(),
+            br(),
             actionButton("add_point", "Add point",
               style = blue_button
+            ),
+            selectizeInput(
+              inputId = "species_choice", label = "Species",
+              choices = list(
+                `Amphibia` = spp_list %>% filter(CLASS == "Amphibia") %>% pull(SENSFEAT),
+                `Arachnida` = spp_list %>% filter(CLASS == "Arachnida") %>% pull(SENSFEAT),
+                `Aves` = spp_list %>% filter(CLASS == "Aves") %>% pull(SENSFEAT),
+                `Insecta` = spp_list %>% filter(CLASS == "Insecta") %>% pull(SENSFEAT),
+                `Invertebrate` = spp_list %>% filter(CLASS == "Invertebrate") %>% pull(SENSFEAT),
+                `Mammalia` = spp_list %>% filter(CLASS == "Mammalia") %>% pull(SENSFEAT)
+              ),
+              selected = NULL,
+              multiple = FALSE,
+              options = list(
+                placeholder = "Make you choice"
+              )
             )
           )
         ),
