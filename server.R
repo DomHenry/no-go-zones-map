@@ -14,35 +14,9 @@ server <- function(input, output, session) {
   ### Reset map to original state ----
   observeEvent(input$map_reset,{
 
-    leafletProxy("nogomap") %>%
-      setView(lng = 25.4015133,
-              lat = -29.1707702,
-              zoom = 6) %>%
-      clearGroup("User property") %>%
-      clearGroup("User point") %>%
-      clearGroup("cranes") %>%
-      clearControls() %>%
-      addLegend("bottomright",
-                colors = layer_cols,
-                labels = c("No-Go","PA","Farm portion","ERF"),
-                title = "Legend",
-                opacity = opacity_cols) %>%
-      removeLayersControl() %>%
-      addLayersControl(
-        baseGroups = c("Topographic", "Streets","Imagery"),
-        overlayGroups= overlay_grp_names,
-        options = layersControlOptions(collapsed=FALSE)
-      ) %>%
-      hideGroup("Farm portions") %>%
-      hideGroup("ERFs") %>%
-      hideGroup("Protected areas")
-    # # NOT WORKING: # Note 6
-    # removeDrawToolbar(clearFeatures=TRUE) %>%
-    # addDrawToolbar(polylineOptions = FALSE,
-    #                markerOptions = FALSE,
-    #                circleMarkerOptions = FALSE,
-    #                circleOptions = FALSE,
-    #                editOptions = editToolbarOptions())
+    output$nogomap <- renderLeaflet({
+      global_base_map
+    })
 
     ## Reset input boxes
     updateSelectizeInput(session,
@@ -55,8 +29,27 @@ server <- function(input, output, session) {
     shp_value$poly_shp <- NULL
     shinyjs::hide("downloadData")
 
-  })
+    updateSelectizeInput(session,
+      inputId = "spp_choice", label = "Species",
+      choices = list(
+        `Amphibia` = spp_list %>% filter(CLASS == "Amphibia") %>% pull(SENSFEAT),
+        `Arachnida` = spp_list %>% filter(CLASS == "Arachnida") %>% pull(SENSFEAT),
+        `Aves` = spp_list %>% filter(CLASS == "Aves") %>% pull(SENSFEAT),
+        `Insecta` = spp_list %>% filter(CLASS == "Insecta") %>% pull(SENSFEAT),
+        `Invertebrate` = spp_list %>% filter(CLASS == "Invertebrate") %>% pull(SENSFEAT),
+        `Mammalia` = spp_list %>% filter(CLASS == "Mammalia") %>% pull(SENSFEAT),
+        `Reptilia` = spp_list %>% filter(CLASS == "Reptilia") %>% pull(SENSFEAT),
+        `Plants` = spp_list %>% filter(THEME  == "Plants") %>% pull(SENSFEAT)
 
+      ),
+      selected = NULL,
+      # multiple = FALSE,
+      options = list(
+        placeholder = "Start typing or select from dropdown",
+        onInitialize = I('function() { this.setValue("a"); }')
+      )
+    )
+  })
 
   ### Reset shapefile upload input ----
   values <- reactiveValues(
@@ -274,6 +267,65 @@ server <- function(input, output, session) {
 
   })
 
+  ### Extract species data from list choice ----
+  spp_extract <- reactive({
+
+    req(input$spp_choice)
+
+    spp_poly <- nogo %>%
+      filter(SENSFEAT %in% input$spp_choice)
+
+    return(spp_poly)
+
+  })
+
+  ### Plot species distribution from list choice ----
+
+  observeEvent(input$plot_spp,{
+
+    req(spp_extract())
+
+    cen <- sfc_as_cols(st_centroid(spp_extract())) %>%
+      st_drop_geometry()
+
+    square <- st_make_grid(st_bbox(spp_extract()), n = 1)
+    sq_area <- as.numeric(st_area(square))/1e+6
+
+    leafletProxy("nogomap") %>%
+      addPolygons(
+        data = spp_extract(),
+        group = "Species",
+        popup = input$spp_choice,
+        fillColor = "#912CEE",
+        fillOpacity = opacity_cols,
+        stroke = TRUE,
+        color = "black",
+        weight = 0.8,
+        smoothFactor = 2
+      ) %>%
+      setView(
+        lng = cen$x[1],
+        lat = cen$y[1],
+        zoom = set_zoom_spp(sq_area)
+      )  %>%
+      removeLayersControl() %>%
+      addLayersControl(
+        baseGroups = c("Topographic", "Streets","Imagery"),
+        overlayGroups= c(overlay_grp_names, "Species"),
+        options = layersControlOptions(collapsed=FALSE)
+      ) %>%
+      hideGroup("Farm portions") %>%
+      hideGroup("ERFs") %>%
+      hideGroup("Protected areas") %>%
+      hideGroup("No-go areas") %>%
+      clearControls() %>%
+      addLegend("bottomright",
+                colors = c(layer_cols,"#912CEE"),
+                labels = c(overlay_grp_names, "Species"),
+                title = "Legend",
+                opacity = opacity_cols)
+
+  })
 
   ## HAND-DRAWN POLYGON DOWNLOAD ----
 
@@ -335,6 +387,10 @@ server <- function(input, output, session) {
 
     req(prop_extract())
 
+    validate(
+      need(!is.null(input$sg_key), "Please select/enter valid SG code")
+    )
+
     nogo_user_int <- st_intersection(prop_extract(), nogo)
     df <- compile_species_table(nogo_user_int)
     df <- draw_gt(df)
@@ -381,6 +437,12 @@ server <- function(input, output, session) {
   ## Populate when shape is drawn
   observeEvent(input$nogomap_draw_new_feature, {
     shp_value$poly_shp = input$nogomap_draw_new_feature$geometry$coordinates[[1]]
+
+    observeEvent(input$nogomap_draw_new_feature, { # Note 4
+      shinyjs::show("downloaddiv")
+    })
+
+
   })
 
   sens_df_hand <- reactive({
