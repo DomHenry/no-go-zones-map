@@ -1,26 +1,107 @@
 ## UI ----
 header <- dashboardHeader(
   title = "Threatend Species No-Go Map",
-  titleWidth = 320
+  titleWidth = 350
 )
+
+blue_button <- "color: #fff; background-color: #337ab7; border-color: #2e6da4"
+
+# Basically what happens is, when you insert other input elements into a menuItem, it loses the data-toggle and data-value attributes. Because of this, tabItems in dashboardBody can't link with the menuItems anymore and thus the app can't display the content in the body.
+
+# Fix: https://stackoverflow.com/questions/50245925/tabitem-cannot-show-the-content-when-more-functions-in-menuitem-using-shiny-and
+
+# See also: https://rstudio.github.io/shinydashboard/behavior.html
+
+convertMenuItem <- function(mi,tabName) {
+  mi$children[[1]]$attribs['data-toggle']="tab"
+  mi$children[[1]]$attribs['data-value'] = tabName
+  mi
+}
+
 
 ## Sidebar ----
 sidebar <- dashboardSidebar(
   width = 350,
+  useShinyjs(), # Add this to allow shinyjs functions to work in server
+  tags$head(
+    tags$style(HTML("
+                      .sidebar { height: 90vh; overflow-y: auto; }
+                      "))
+  ),
   sidebarMenu(
     menuItem("Welcome",
       tabName = "welcome", icon = icon("info-circle"),
       selected = TRUE    ),
-    menuItem("Interactive map",
+    convertMenuItem(
+      menuItem("Interactive map",
       tabName = "int_map", icon = icon("map-marked-alt"),
-      selected = FALSE
+      useShinyjs(), # Add this to allow shinyjs functions to work in server
+      fileInput("user_shape",
+                HTML("Upload shapefile or KML: <br/> <em> (.shp, .shx, .dbf,
+                           and .prj files are all <br/> required for shapefile upload)</em>"),
+                multiple = TRUE,
+                accept = c(
+                  ".kml",
+                  ".shx", ".shp", ".sbn", ".sbx", ".dbf", ".prj"
+                )
+      ),
+      actionButton("plot_footprint", "Plot shapefile or KML", style = blue_button),
+      tags$hr(),
+      selectizeInput("sg_key", "Search with 21 digit SG key:",
+                     choices = c("Enter SG key" = "", sgdata),
+                     options = list(create = FALSE, selectOnTab = TRUE)
+      ),
+      actionButton("search_prop", "Plot property", style = blue_button),
+      br(),
+      tags$hr(),
+      tags$b(HTML('&nbsp;'),HTML('&nbsp;'),HTML('&nbsp;'),"Enter point (decimal degrees):"),
+      tags$p(),
+      fillRow(
+        height = "100%", width = "100%", flex = 1,
+        numericInput("lat", "Latitude", value = NULL, max = 0), #-30.375
+        numericInput("long", "Longitude", value = NULL) #30.6858
+      ),
+      br(),
+      br(),
+      br(),
+      br(),
+      actionButton("add_point", "Add point",
+                   style = blue_button
+      ),
+      tags$hr(),
+      selectizeInput(
+        inputId = "spp_choice", label = "Species",
+        choices = list(
+          `Amphibia` = spp_list %>% filter(CLASS == "Amphibia") %>% pull(SENSFEAT),
+          `Arachnida` = spp_list %>% filter(CLASS == "Arachnida") %>% pull(SENSFEAT),
+          `Aves` = spp_list %>% filter(CLASS == "Aves") %>% pull(SENSFEAT),
+          `Insecta` = spp_list %>% filter(CLASS == "Insecta") %>% pull(SENSFEAT),
+          `Invertebrate` = spp_list %>% filter(CLASS == "Invertebrate") %>% pull(SENSFEAT),
+          `Mammalia` = spp_list %>% filter(CLASS == "Mammalia") %>% pull(SENSFEAT),
+          `Reptilia` = spp_list %>% filter(CLASS == "Reptilia") %>% pull(SENSFEAT),
+          `Plants` = spp_list %>% filter(THEME  == "Plants") %>% pull(SENSFEAT)
+
+        ),
+        selected = NULL,
+        multiple = FALSE,
+        options = list(
+          placeholder = "Start typing or select from dropdown",
+          onInitialize = I('function() { this.setValue("a"); }')
+        )
+      ),
+      actionButton("plot_spp", "Plot species", style = blue_button),
+
+      br(),
+      br()
+
     ),
+    tabName = "int_map"),
+
     menuItem("Data table outputs", tabName = "tables", icon = icon("table")),
-    menuItem("Help", tabName = "help", icon = icon("question-circle"))
-  )
+    menuItem("Help & resources", tabName = "help", icon = icon("question-circle"))
+        )
 )
 
-blue_button <- "color: #fff; background-color: #337ab7; border-color: #2e6da4"
 
 # More buttons options
 # https://getbootstrap.com/docs/4.0/components/buttons/
@@ -32,7 +113,7 @@ body <- dashboardBody(
   tags$head(
     tags$style(type='text/css',
                ".nav-tabs {font-size: 15px; font-weight: bold}
-               .main-sidebar {font-size: 16px;}")),
+               .main-sidebar {font-size: 14px; font-weight: normal}")),
   tabItems(
     tabItem(
       tabName = "welcome",
@@ -62,14 +143,14 @@ body <- dashboardBody(
               style = tab_font,
               br(),
               includeMarkdown("data_input/03_defined.Rmd"),
-              img(src = "Infographic_clipped.png", height = "500px"),
+              img(src = "Infographic_landscape_clipped.png", height = "280px"),
               value = 2
             ),
             tabPanel(
               title = "Species summaries",
               style = tab_font,
               br(),
-              includeMarkdown("data_input/04_species.Rmd"),
+              # includeMarkdown("data_input/04_species.Rmd"),
               gt_output("spp_summary_table"),
               br(),
               downloadButton("download_species_list", "Download species list"),
@@ -88,13 +169,6 @@ body <- dashboardBody(
               br(),
               includeMarkdown("data_input/06_contribute.Rmd"),
               value = 5
-            ),
-            tabPanel(
-              title = "Resources",
-              style = tab_font,
-              br(),
-              includeMarkdown("data_input/07_resources.Rmd"),
-              value = 6
             )
           )
         )
@@ -104,68 +178,12 @@ body <- dashboardBody(
       tabName = "int_map",
       fluidRow(
         column(
-          width = 3,
-          box(
-            title = "Inputs", width = NULL, solidHeader = TRUE,
-            status = "primary",
-            useShinyjs(), # Add this to allow shinyjs functions to work in server
-            fileInput("user_shape",
-              HTML("Upload shapefile or KML: <br/> <em> (.shp, .shx, .dbf,
-                           and .prj files are all <br/> required for shapefile upload)</em>"),
-              multiple = TRUE,
-              accept = c(
-                ".kml",
-                ".shx", ".shp", ".sbn", ".sbx", ".dbf", ".prj"
-              )
-            ),
-            actionButton("plot_footprint", "Plot shapefile or KML", style = blue_button),
-            tags$hr(),
-            selectizeInput("sg_key", "Search with 21 digit SG key:",
-              choices = c("Enter SG key" = "", sgdata),
-              options = list(create = FALSE, selectOnTab = TRUE)
-            ),
-            actionButton("search_prop", "Plot property", style = blue_button),
-            br(),
-            tags$hr(),
-            tags$b("Enter point (decimal degrees):"),
-            tags$p(),
-            fillRow(
-              height = "100%", width = "100%", flex = 1,
-              numericInput("lat", "Latitude", value = -30.375),
-              numericInput("long", "Longitude", value = 30.6858)
-              ),
-            br(),
-            br(),
-            br(),
-            br(),
-            actionButton("add_point", "Add point",
-              style = blue_button
-            ),
-            selectizeInput(
-              inputId = "species_choice", label = "Species",
-              choices = list(
-                `Amphibia` = spp_list %>% filter(CLASS == "Amphibia") %>% pull(SENSFEAT),
-                `Arachnida` = spp_list %>% filter(CLASS == "Arachnida") %>% pull(SENSFEAT),
-                `Aves` = spp_list %>% filter(CLASS == "Aves") %>% pull(SENSFEAT),
-                `Insecta` = spp_list %>% filter(CLASS == "Insecta") %>% pull(SENSFEAT),
-                `Invertebrate` = spp_list %>% filter(CLASS == "Invertebrate") %>% pull(SENSFEAT),
-                `Mammalia` = spp_list %>% filter(CLASS == "Mammalia") %>% pull(SENSFEAT)
-              ),
-              selected = NULL,
-              multiple = FALSE,
-              options = list(
-                placeholder = "Make you choice"
-              )
-            )
-          )
-        ),
-        column(
-          width = 9,
+          width = 12,
           box(
             title = NULL, width = NULL, solidHeader = TRUE,
             div(
               id = "nogomapdiv",
-              leafletOutput("nogomap", width = "100%", height = 620) %>%
+              leafletOutput("nogomap", width = "100%", height = 600) %>%
                 withSpinner(type = 1, size = 1.5)
             ),
             div(
@@ -184,7 +202,7 @@ body <- dashboardBody(
                 absolutePanel(
                   id = "download_shapefile", class = "panel panel-default",
                   fixed = TRUE, draggable = FALSE,
-                  top = 350, right = 720, left = "auto", bottom = "auto",
+                  top = 350, right = 920, left = "auto", bottom = "auto",
                   width = "auto", height = "auto",
                   downloadButton("downloadData", "Download hand-drawn shape")
                 )
@@ -296,8 +314,10 @@ body <- dashboardBody(
 
     tabItem(
       tabName = "help",
-      h2("Suggestions? Queries? Bugs? Need help?"),
-      h3("Contact us on science@ewt.org.za")
+      h3("Help"),
+      h4("For suggestions, queries, or to report bugs please contact us: science@ewt.org.za"),
+      h3("Resources"),
+      includeMarkdown("data_input/07_resources.Rmd")
     )
   )
 )
