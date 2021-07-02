@@ -8,12 +8,10 @@ library(shinycssloaders)
 library(leaflet)
 library(rgdal)
 library(shinythemes)
-library(DT)
 library(leaflet.extras)
 library(leaflet.esri)
 library(leafem)
 library(gt)
-library(log4r)
 
 latlongCRS <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
@@ -235,11 +233,12 @@ draw_gt <- function(x){
       title = md("List of species flagged in no-go property"),
       subtitle = ""
     ) %>%
-    tab_footnote(footnote = "Environmental Screening Tool",
-                 locations = cells_column_labels(
-                   columns = vars(`EST Theme`)
-                 )
-    ) %>%
+    # tab_footnote(footnote = "Environmental Screening Tool",
+    #              locations = cells_column_labels(
+    #                columns = vars(`EST Theme`)
+    #              )
+    # ) %>%
+    cols_label(`EST Theme` = "Theme") %>%
     tab_style(
       style = list(
         cell_text(style = "italic")
@@ -299,4 +298,30 @@ species_summary_table <- spp_list %>%
   rename(Theme = THEME, `Class or taxa` = CLASS, `Number of species` = n) %>%
   ungroup() %>%
   mutate(`Class or taxa` = ifelse(is.na(`Class or taxa`), "-", `Class or taxa`)) %>%
-  gt::gt(.)
+  gt::gt(.) %>%
+  tab_header(
+    title = md("Number of species in each group included in no-go map"),
+    subtitle = ""
+  )
+
+
+set_zoom_spp <- function(x){
+
+  if(x > 2100){
+    zoom_lev <- 10
+  } else if (x > 1500 & x < 2100){
+    zoom_lev <- 10
+  } else if (x > 1200 & x < 1500){
+    zoom_lev <- 11
+  } else if (x > 800 & x < 1200){
+    zoom_lev <- 12
+  } else if (x > 600 & x < 800){
+    zoom_lev <- 13
+  } else if (x > 300 & x < 600){
+    zoom_lev <- 13
+  } else if (x < 300){
+    zoom_lev <- 14
+  }
+
+  return(zoom_lev)
+}
