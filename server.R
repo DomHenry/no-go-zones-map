@@ -257,7 +257,6 @@ server <- function(input, output, session) {
         overlayGroups= c(overlay_grp_names, "User property"),
         options = layersControlOptions(collapsed=FALSE)
       ) %>%
-      showGroup("Farm portions") %>%
       clearControls() %>%
       addLegend("bottomright",
                 colors = c(layer_cols,"#912CEE"),
