@@ -195,6 +195,7 @@ compile_species_table <- function(x){
     rename(Species = SENSFEAT, 'EST Theme' = THEME,
            'Polygon count' = n) %>%
     select(Species,everything()) %>%
+    arrange(`EST Theme`, Species) %>%
     ungroup()
 
 
