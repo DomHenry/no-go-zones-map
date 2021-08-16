@@ -225,7 +225,7 @@ body <- dashboardBody(
               value = 1,
               fluidRow(
                 box(
-                  title = "Species", width = 12, collapsible = TRUE, collapsed = TRUE,
+                  title = "Species", width = 12, collapsible = TRUE, collapsed = FALSE,
                   solidHeader = TRUE, status = "success",
                   gt_output(outputId = "sens_feat_table_user"),
                   br(),
@@ -246,7 +246,7 @@ body <- dashboardBody(
               value = 2,
               fluidRow(
                 box(
-                  title = "Species", width = 12, collapsible = TRUE, collapsed = TRUE,
+                  title = "Species", width = 12, collapsible = TRUE, collapsed = FALSE,
                   solidHeader = TRUE, status = "success",
                   gt_output("sens_feat_table_sg"),
                   br(),
@@ -268,7 +268,7 @@ body <- dashboardBody(
               value = 3,
               fluidRow(
                 box(
-                  title = "Species", width = 12, collapsible = TRUE, collapsed = TRUE,
+                  title = "Species", width = 12, collapsible = TRUE, collapsed = FALSE,
                   solidHeader = TRUE, status = "success",
                   gt_output("sens_feat_table_point"),
                   br(),
@@ -277,7 +277,7 @@ body <- dashboardBody(
               ),
               fluidRow(
                 box(
-                  title = "Properties", width = 12, collapsible = TRUE, collapsed = TRUE,
+                  title = "Property", width = 12, collapsible = TRUE, collapsed = TRUE,
                   solidHeader = TRUE, status = "success",
                   gt_output("property_table_point"),
                   br(),
@@ -290,7 +290,7 @@ body <- dashboardBody(
               value = 4,
               fluidRow(
                 box(
-                  title = "Species", width = 12, collapsible = TRUE, collapsed = TRUE,
+                  title = "Species", width = 12, collapsible = TRUE, collapsed = FALSE,
                   solidHeader = TRUE, status = "success",
                   gt_output("sens_feat_table_hand"),
                   br(),
@@ -315,7 +315,7 @@ body <- dashboardBody(
     tabItem(
       tabName = "help",
       h3("Help"),
-      h4("For suggestions, queries, or to report bugs please contact us: science@ewt.org.za"),
+      h5("For suggestions, queries, or to report bugs please contact us: science@ewt.org.za"),
       h3("Resources"),
       includeMarkdown("data_input/07_resources.Rmd")
     )
