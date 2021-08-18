@@ -128,7 +128,7 @@ body <- dashboardBody(
               style = tab_font,
               br(),
               includeMarkdown("data_input/01_background.Rmd"),
-              # img(src = "ewt_01.png", height = "100px"),
+              img(src = "ewt_02.jpg", height = "100px"), # style= 'position:absolute; right:10px;',
               value = 1
             ),
             tabPanel(
