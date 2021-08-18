@@ -1,0 +1,24 @@
+---
+title: "05_how it works"
+author: "Dominic Henry"
+date: "28/06/2021"
+output: html_document
+---
+
+**Basic instructions**
+
+To get started click on the "Interactive map" menu item in the sidebar. The default view of the map displays all of the threatened species no-go areas. Zoom in to look at these features more closely. Hover over the feature to display more information.
+
+The panel on the right shows a number of layers that can be toggled on/off. At the top we have three base layers showing either a topographic, street, or satellite imagery view. Below those are the data layers which include the no-go areas which can be turned on/off, the protected area layers and, the farm portions and ERFS from the cadastral data.
+
+There are four ways to query the map with your own spatial data: you can either upload a shapefile/KML file, enter a Survey General 21 digit property code, enter a latitude or longitude point, or manually draw a polygon directly on the map.
+
+In order to view further details about the species that are flagged as no-go and the properties that they occur in click on the “Data table outputs” sidebar menu item.
+
+This page has four tabs that correspond to each of the spatial input methods. Click on each one as needed. Each tab has a “Species” table, where details of the no-go species are listed, and a “Property” table which contains the details of properties in which a species or group of species is found. The download button can be used to export the tables in an Excel CSV format.
+
+There is also an option to plot all of the no-go polygons of a specific species. Navigate back to the “Interactive map” sidebar menu item and scroll to the “Species” dropdown list. Here you can either select a species from the list or start typing to bring up the matching species. Click plot to view the entire species layer, which can also be toggled on/off.
+
+**Demo**
+
+Click [here](https://www.youtube.com/watch?v=98ynFNbRZ_A&ab_channel=TheEndangeredWildlifeTrust) to watch a short demo of how to use the tool.

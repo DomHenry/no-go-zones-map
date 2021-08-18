@@ -1,0 +1,16 @@
+---
+title: "03_defined"
+author: "Dominic Henry"
+date: "28/06/2021"
+output: html_document
+---
+
+The data included in this national scale map are a subset of the data included in the EST terrestrial animal and plant sensitivity layers. We followed a three-step process to filter the screening tool data in order to identify our threatened species no-go areas.
+
+First, we included only data from the Very High or High sensitivity categories.
+
+Second, we kept only species which were Red Listed under the IUCN's criteria B, C, and D. This ensures that the species in the map are facing threats directly related to habitat transformation and loss.
+
+Third, we calculated the total geographic area of the polygons in the screening tool layers and retained species which had a total of less than or equal to 25km^2^. This therefore identifies species for which we have confirmed occurrence records from an extremely restricted area.
+
+![](data_input/Infographic_clipped.png)

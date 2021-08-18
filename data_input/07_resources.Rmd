@@ -1,0 +1,18 @@
+---
+title: "07_resources"
+author: "Dominic Henry"
+date: "28/06/2021"
+output: html_document
+---
+
+-   Environmental Screening Tool -- <https://screening.environment.gov.za>
+
+-   Government Gazette of the Terrestrial Plant Species and Terrestrial Animal Species protocols -- <https://www.environment.gov.za/sites/default/files/gazetted_notices/nema_environmentalthemes_reportingcriteria_g43110_gn320.pdf>
+
+-   Species environmental assessment guideline: Guidelines for the implementation of the Terrestrial Flora (3c) & Terrestrial Fauna (3d) Species Protocols for environmental impact assessments in South Africa -- <http://opus.sanbi.org/jspui/handle/20.500.12143/6922>
+
+-   Understanding SG codes -- <http://csg.dla.gov.za/21charac.htm>
+
+-   Endangered Wildlife Trust -- <https://www.ewt.org.za>
+
+-   SANBI -- <https://www.sanbi.org/>
