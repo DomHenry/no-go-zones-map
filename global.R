@@ -13,6 +13,8 @@ library(leaflet.esri)
 library(leafem)
 library(gt)
 
+# Date 26/08/2021
+
 latlongCRS <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 ## Load data ----
