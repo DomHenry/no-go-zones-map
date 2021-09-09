@@ -1,6 +1,6 @@
 ## UI ----
 header <- dashboardHeader(
-  title = "Threatend Species No-Go Map",
+  title = "Threatened Species No-Go Map",
   titleWidth = 350
 )
 
