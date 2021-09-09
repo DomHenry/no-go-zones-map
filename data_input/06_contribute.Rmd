@@ -2,7 +2,9 @@
 title: "06_contribute"
 author: "Dominic Henry"
 date: "28/06/2021"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
 
 Any records of threatened species collected during EIAs and by specialists during surveys are of high value in terms of developing species distribution models and understanding the range of our threatened species. We are currently involved in research that is exploring how specialist data can easily be fed into the modelling process. In the meantime we are aware that, based on the gazetted species protocol, species records need to be uploaded onto a virtual museum platform, however in the interim, records can be directly submitted to science@ewt.org.za

@@ -2,7 +2,9 @@
 title: "03_defined"
 author: "Dominic Henry"
 date: "28/06/2021"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
 
 The data included in this national scale map are a subset of the data included in the EST terrestrial animal and plant sensitivity layers. We followed a three-step process to filter the screening tool data in order to identify our threatened species no-go areas.

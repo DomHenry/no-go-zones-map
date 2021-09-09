@@ -2,7 +2,9 @@
 title: "02_purpose"
 author: "Dominic Henry"
 date: "28/06/2021"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
 
 This is a national scale application which informs prospective developers, Environmental Assessment practitioners and/or the general public about areas of very high sensitivity biodiversity importance based on threatened animal and plant data. The intended purpose of the tool is to inform the placement of proposed potentially detrimental developments in order to encourage early-stage rejection or avoidance before EIA commencement and in this way avoid unnecessary cost to the developer, the responding interested and affected parties (especially conservation agencies) and as a result reduce irreversible loss/risk to the environment. There has been hesitancy to identify areas which are highly unsuitable for development and this application aims to address this directly. From the perspective of threatened plant and animal diversity, this online app allows for rapid assessment of site sensitivity to inform the first stage of the mitigation hierarchy, that being avoidance.

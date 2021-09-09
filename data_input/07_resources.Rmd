@@ -2,7 +2,9 @@
 title: "07_resources"
 author: "Dominic Henry"
 date: "28/06/2021"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
 
 -   Environmental Screening Tool -- <https://screening.environment.gov.za>

@@ -2,7 +2,9 @@
 title: "05_how it works"
 author: "Dominic Henry"
 date: "28/06/2021"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
 
 **Basic instructions**
