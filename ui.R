@@ -29,9 +29,6 @@ sidebar <- dashboardSidebar(
                       "))
   ),
   sidebarMenu(
-    menuItem("Welcome",
-      tabName = "welcome", icon = icon("info-circle"),
-      selected = TRUE    ),
     convertMenuItem(
       menuItem("Interactive map",
       tabName = "int_map", icon = icon("map-marked-alt"),
@@ -98,7 +95,7 @@ sidebar <- dashboardSidebar(
     tabName = "int_map"),
 
     menuItem("Data table outputs", tabName = "tables", icon = icon("table")),
-    menuItem("Help & resources", tabName = "help", icon = icon("question-circle"))
+    menuItem("Help", tabName = "help", icon = icon("question-circle"))
         )
 )
 
@@ -116,65 +113,6 @@ body <- dashboardBody(
                .main-sidebar {font-size: 14px; font-weight: normal}")),
   tabItems(
     tabItem(
-      tabName = "welcome",
-      fluidRow(
-        column(
-          width = 12,
-          tabBox(
-            id = "tabvals",
-            width = NULL,
-            tabPanel(
-              title = "Background",
-              style = tab_font,
-              br(),
-              includeMarkdown("data_input/01_background.Rmd"),
-              img(src = "ewt_02.jpg", height = "100px"), # style= 'position:absolute; right:10px;',
-              value = 1
-            ),
-            tabPanel(
-              title = "Purpose",
-              style = tab_font,
-              br(),
-              includeMarkdown("data_input/02_purpose.Rmd"),
-              value = 2
-            ),
-            tabPanel(
-              title = "How are no-go areas defined?",
-              style = tab_font,
-              br(),
-              includeMarkdown("data_input/03_defined.Rmd"),
-              img(src = "Infographic_landscape_clipped.png", height = "280px"),
-              value = 2
-            ),
-            tabPanel(
-              title = "Species summaries",
-              style = tab_font,
-              br(),
-              # includeMarkdown("data_input/04_species.Rmd"),
-              gt_output("spp_summary_table"),
-              br(),
-              downloadButton("download_species_list", "Download species list"),
-              value = 3
-            ),
-            tabPanel(
-              title = "How it works",
-              style = tab_font,
-              br(),
-              includeMarkdown("data_input/05_how it works.Rmd"),
-              value = 4
-            ),
-            tabPanel(
-              title = "Please contribute your data",
-              style = tab_font,
-              br(),
-              includeMarkdown("data_input/06_contribute.Rmd"),
-              value = 5
-            )
-          )
-        )
-      )
-    ),
-    tabItem(
       tabName = "int_map",
       fluidRow(
         column(
@@ -186,16 +124,16 @@ body <- dashboardBody(
               leafletOutput("nogomap", width = "100%", height = 600) %>%
                 withSpinner(type = 1, size = 1.5)
             ),
-            div(
-              id = "clearcontroldiv",
-              absolutePanel(
-                id = "clear_control", class = "panel panel-default",
-                fixed = TRUE, draggable = FALSE,
-                top = 350, right = 30, left = "auto", bottom = "auto",
-                width = "auto", height = "auto",
-                actionButton("map_reset", "Clear map inputs")
-              )
-            ),
+            # div(
+            #   id = "clearcontroldiv",
+            #   absolutePanel(
+            #     id = "clear_control", class = "panel panel-default",
+            #     fixed = TRUE, draggable = FALSE,
+            #     top = 350, right = 30, left = "auto", bottom = "auto",
+            #     width = "auto", height = "auto",
+            #     actionButton("map_reset", "Clear map inputs")
+            #   )
+            # ),
             shinyjs::hidden(
               div(
                 id = "downloaddiv",
@@ -314,14 +252,23 @@ body <- dashboardBody(
 
     tabItem(
       tabName = "help",
-      h3("Help"),
-      h5("For suggestions, queries, or to report bugs please contact us: science@ewt.org.za"),
-      h3("Resources"),
-      includeMarkdown("data_input/07_resources.Rmd")
+      h2(tags$b("Help")),
+      h3("Visit the EWT No-Go Map companion",
+         tags$a("webpage", href = "https://www.ewt.org.za/resources/no-go-screening-tool/"),
+         "for more information about the project and the data used in the map."),
+      h3("Click",
+         tags$a("here",
+                href = "https://www.youtube.com/watch?v=98ynFNbRZ_A&t=1s"),
+         "to watch a short demo of how to use the No-go map."),
+      br(),
+      h2(tags$b("Feedback")),
+      h3("Do you have suggestions or queries, or would you like to report something that is not
+         working in the app?"),
+      h3("If so, please contact us at science@ewt.org.za"),
+      h3("Thank you!")
     )
   )
 )
-
 
 ## Dashboard page ----
 ui <- dashboardPage(
