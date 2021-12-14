@@ -176,12 +176,8 @@ server <- function(input, output, session) {
 
   })
 
-
   ### Plot user point ----
 
-  # Farm
-  "-33.7"
-  "20.5"
   # ERF
   "-30.375"
   "30.6858"
@@ -739,5 +735,4 @@ server <- function(input, output, session) {
 
 ## Note 6 ----
 
-# In order to get this function working I would need to follow this and make manual changes to package for fix:
-  # https://github.com/bhaskarvk/leaflet.extras/issues/148
+# In order to get this function working I would need to follow this and make manual changes to package for fix: https://github.com/bhaskarvk/leaflet.extras/issues/148
