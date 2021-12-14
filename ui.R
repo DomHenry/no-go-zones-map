@@ -34,24 +34,24 @@ sidebar <- dashboardSidebar(
       tabName = "int_map", icon = icon("map-marked-alt"),
       useShinyjs(), # Add this to allow shinyjs functions to work in server
       fileInput("user_shape",
-                HTML("Upload shapefile or KML: <br/> <em> (.shp, .shx, .dbf,
-                           and .prj files are all <br/> required for shapefile upload)</em>"),
+                HTML("Upload polygon (shapefile or KML) <br/> <em> Note that .shp, .shx, .dbf,
+                           and .prj files are all <br/> required for shapefile upload</em>"),
                 multiple = TRUE,
                 accept = c(
                   ".kml",
                   ".shx", ".shp", ".sbn", ".sbx", ".dbf", ".prj"
                 )
       ),
-      actionButton("plot_footprint", "Plot shapefile or KML", style = blue_button),
+      actionButton("plot_footprint", "Plot shapefile or KML polygon", style = blue_button),
       tags$hr(),
-      selectizeInput("sg_key", "Search with 21 digit SG key:",
+      selectizeInput("sg_key", "Search with 21 digit SG key",
                      choices = c("Enter SG key" = "", sgdata),
                      options = list(create = FALSE, selectOnTab = TRUE)
       ),
       actionButton("search_prop", "Plot property", style = blue_button),
       br(),
       tags$hr(),
-      tags$b(HTML('&nbsp;'),HTML('&nbsp;'),HTML('&nbsp;'),"Enter point (decimal degrees):"),
+      tags$b(HTML('&nbsp;'),HTML('&nbsp;'),HTML('&nbsp;'),"Enter point (decimal degrees)"),
       tags$p(),
       fillRow(
         height = "100%", width = "100%", flex = 1,
@@ -124,16 +124,17 @@ body <- dashboardBody(
               leafletOutput("nogomap", width = "100%", height = 600) %>%
                 withSpinner(type = 1, size = 1.5)
             ),
-            # div(
-            #   id = "clearcontroldiv",
-            #   absolutePanel(
-            #     id = "clear_control", class = "panel panel-default",
-            #     fixed = TRUE, draggable = FALSE,
-            #     top = 350, right = 30, left = "auto", bottom = "auto",
-            #     width = "auto", height = "auto",
-            #     actionButton("map_reset", "Clear map inputs")
-            #   )
-            # ),
+            shinyjs::hidden(
+              div(
+              id = "clearcontroldiv",
+              absolutePanel(
+                id = "clear_control", class = "panel panel-default",
+                fixed = TRUE, draggable = FALSE,
+                top = 350, right = 30, left = "auto", bottom = "auto",
+                width = "auto", height = "auto",
+                actionButton("map_reset", "Reset & clear map")
+              )
+            )),
             shinyjs::hidden(
               div(
                 id = "downloaddiv",
