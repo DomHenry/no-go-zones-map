@@ -13,6 +13,11 @@ server <- function(input, output, session) {
 
   ### Reset map to original state ----
 
+  # Temporary solution is to restart session
+  observeEvent(input$map_reset,{
+    session$reload()
+      })
+
   # FIXME This is causing lag and app freeze issues. Remove for now but explore fixes.
 
   # observeEvent(input$map_reset,{
@@ -113,6 +118,7 @@ server <- function(input, output, session) {
 
       poly <- poly %>%
         st_transform(crs = latlongCRS)
+
       st_crs(poly) <- latlongCRS
       return(poly)
 
@@ -126,12 +132,14 @@ server <- function(input, output, session) {
   ###  Plot user input polygon ----
   observeEvent(input$plot_footprint,{
 
+    shinyjs::show("clearcontroldiv")
+
     if(!is.null(user_polygon())){
 
-      cen <- sfc_as_cols(st_centroid(user_polygon())) %>%
-      st_drop_geometry()
+      cen <- rgeos::gCentroid(as(user_polygon(), "Spatial"), byid = FALSE) %>%
+        as(., "data.frame")
 
-      poly_area <- as.numeric(st_area(user_polygon())/1000000)
+      poly_area <- as.numeric(st_area(st_union(user_polygon()))/1000000)
 
       leafletProxy("nogomap") %>%
         addPolygons(
@@ -190,6 +198,9 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$add_point,{
+
+    shinyjs::show("clearcontroldiv")
+
     leafletProxy("nogomap") %>%
       addMarkers(
         data = user_point(),
@@ -209,6 +220,8 @@ server <- function(input, output, session) {
 
     "K272N0HV000000017445000000" # FARM
     "W048C039000500001399000001" # ERF
+
+    shinyjs::show("clearcontroldiv")
 
     ref_farm <- which(farms$ID %in% input$sg_key)
     ref_erf <- which(erfs$ID %in% input$sg_key)
@@ -285,6 +298,8 @@ server <- function(input, output, session) {
 
   observeEvent(input$plot_spp,{
 
+    shinyjs::show("clearcontroldiv")
+
     req(spp_extract())
 
     cen <- sfc_as_cols(st_centroid(spp_extract())) %>%
@@ -334,6 +349,8 @@ server <- function(input, output, session) {
   ### Show download button ----
   observeEvent(input$nogomap_draw_new_feature, { # Note 4
     shinyjs::show("downloaddiv")
+    shinyjs::show("clearcontroldiv")
+
   })
 
   ### Download hand-drawn shapes ----
