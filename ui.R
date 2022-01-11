@@ -253,20 +253,27 @@ body <- dashboardBody(
 
     tabItem(
       tabName = "help",
-      h2(tags$b("Help")),
-      h3("Visit the EWT No-Go Map companion",
-         tags$a("webpage", href = "https://www.ewt.org.za/resources/no-go-screening-tool/"),
-         "for more information about the project and the data used in the map."),
-      h3("Click",
-         tags$a("here",
-                href = "https://www.youtube.com/watch?v=98ynFNbRZ_A&t=1s"),
-         "to watch a short demo of how to use the No-go map."),
-      br(),
-      h2(tags$b("Feedback")),
-      h3("Do you have suggestions or queries, or would you like to report something that is not
+      fluidRow(
+        box(
+          title = "Help", width = 5, collapsible = FALSE,
+          solidHeader = TRUE, status = "primary",
+          h4("Visit the EWT No-Go Map companion",
+             tags$a("webpage", href = "https://www.ewt.org.za/resources/no-go-screening-tool/"),
+             "for more information about the project and the data used in the map."),
+          h4("Click",
+             tags$a("here",
+                    href = "https://www.youtube.com/watch?v=98ynFNbRZ_A&t=1s"),
+             "to watch a short demo of how to use the No-go map."))
+      ),
+      fluidRow(
+         box(
+          title = "Feedback", width = 5, collapsible = FALSE,
+          solidHeader = TRUE, status = "primary",
+          h4("Do you have suggestions or queries, or would you like to report something that is not
          working in the app?"),
-      h3("If so, please contact us at science@ewt.org.za"),
-      h3("Thank you!")
+         h4("If so, please contact us at science@ewt.org.za"),
+         h4("Thank you!"))
+      )
     )
   )
 )
