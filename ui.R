@@ -262,7 +262,7 @@ body <- dashboardBody(
              "for more information about the project and the data used in the map."),
           h4("Click",
              tags$a("here",
-                    href = "https://www.youtube.com/watch?v=98ynFNbRZ_A&t=1s"),
+                    href = "https://www.youtube.com/watch?v=IerWxlh0QQo"),
              "to watch a short demo of how to use the No-go map."))
       ),
       fluidRow(
