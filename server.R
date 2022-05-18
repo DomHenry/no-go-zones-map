@@ -165,6 +165,8 @@ server <- function(input, output, session) {
           options = layersControlOptions(collapsed=FALSE)
         ) %>%
         hideGroup("Farm portions") %>%
+        showGroup("User property") %>%
+        showGroup("No-go areas") %>%
         clearControls() %>%
         addLegend("bottomright",
                   colors = c(layer_cols,"#912CEE"),
