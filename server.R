@@ -11,53 +11,73 @@ server <- function(input, output, session) {
   ### Render base map in the background ----
   outputOptions(output, "nogomap", suspendWhenHidden = FALSE)
 
+  ## Server-side selectize for massively improved performance
+  updateSelectizeInput(session, "sg_key", "Search with 21 digit SG key:",
+                       choices = c("Enter SG key" = "", sgdata),
+                       options=list(create=FALSE, selectOnTab = TRUE),
+                       server = TRUE)
+
+  updateSelectizeInput(session,
+                       inputId = "spp_choice", label = "Species", server = TRUE,
+                       choices = list(
+                         `Amphibia` = spp_list %>% filter(CLASS == "Amphibia") %>% pull(SENSFEAT),
+                         `Arachnida` = spp_list %>% filter(CLASS == "Arachnida") %>% pull(SENSFEAT),
+                         `Aves` = spp_list %>% filter(CLASS == "Aves") %>% pull(SENSFEAT),
+                         `Insecta` = spp_list %>% filter(CLASS == "Insecta") %>% pull(SENSFEAT),
+                         `Invertebrate` = spp_list %>% filter(CLASS == "Invertebrate") %>% pull(SENSFEAT),
+                         `Mammalia` = spp_list %>% filter(CLASS == "Mammalia") %>% pull(SENSFEAT),
+                         `Reptilia` = spp_list %>% filter(CLASS == "Reptilia") %>% pull(SENSFEAT),
+                         `Plants` = spp_list %>% filter(THEME  == "Plants") %>% pull(SENSFEAT)
+
+                       ),
+                       selected = NULL,
+                       # multiple = FALSE,
+                       options = list(
+                         placeholder = "Start typing or select from dropdown",
+                         onInitialize = I('function() { this.setValue("a"); }')
+                       )
+  )
+
   ### Reset map to original state ----
 
-  # Temporary solution is to restart session
   observeEvent(input$map_reset,{
-    session$reload()
-      })
 
-  # FIXME This is causing lag and app freeze issues. Remove for now but explore fixes.
+    output$nogomap <- renderLeaflet({
+      global_base_map
+    })
 
-  # observeEvent(input$map_reset,{
-  #
-  #   output$nogomap <- renderLeaflet({
-  #     global_base_map
-  #   })
-  #
-  #   ## Reset input boxes
-  #   updateSelectizeInput(session,
-  #                        "sg_key", "Search with 21 digit SG key:",
-  #                        choices = c("Enter SG key" = "", sgdata),
-  #                        options=list(create=FALSE, selectOnTab = TRUE))
-  #   updateNumericInput(session, "lat", "Latitude", value = NA)
-  #   updateNumericInput(session, "long", "Longitude", value = NA)
-  #   shinyjs::reset("user_shape") # Note 2
-  #   shp_value$poly_shp <- NULL
-  #   shinyjs::hide("downloadData")
-  #
-  #   updateSelectizeInput(session,
-  #     inputId = "spp_choice", label = "Species",
-  #     choices = list(
-  #       `Amphibia` = spp_list %>% filter(CLASS == "Amphibia") %>% pull(SENSFEAT),
-  #       `Arachnida` = spp_list %>% filter(CLASS == "Arachnida") %>% pull(SENSFEAT),
-  #       `Aves` = spp_list %>% filter(CLASS == "Aves") %>% pull(SENSFEAT),
-  #       `Insecta` = spp_list %>% filter(CLASS == "Insecta") %>% pull(SENSFEAT),
-  #       `Invertebrate` = spp_list %>% filter(CLASS == "Invertebrate") %>% pull(SENSFEAT),
-  #       `Mammalia` = spp_list %>% filter(CLASS == "Mammalia") %>% pull(SENSFEAT),
-  #       `Reptilia` = spp_list %>% filter(CLASS == "Reptilia") %>% pull(SENSFEAT),
-  #       `Plants` = spp_list %>% filter(THEME  == "Plants") %>% pull(SENSFEAT)
-  #
-  #     ),
-  #     selected = NULL,
-  #     # multiple = FALSE,
-  #     options = list(
-  #       placeholder = "Start typing or select from dropdown",
-  #       onInitialize = I('function() { this.setValue("a"); }')
-  #     )
-  #   )
-  # })
+    ## Reset input boxes
+    updateSelectizeInput(session,
+                         "sg_key", "Search with 21 digit SG key:", server = TRUE,
+                         choices = c("Enter SG key" = "", sgdata),
+                         options=list(create=FALSE, selectOnTab = TRUE))
+    updateNumericInput(session, "lat", "Latitude", value = NA)
+    updateNumericInput(session, "long", "Longitude", value = NA)
+    shinyjs::reset("user_shape") # Note 2
+    shp_value$poly_shp <- NULL
+    shinyjs::hide("downloadData")
+
+  updateSelectizeInput(session,
+    inputId = "spp_choice", label = "Species", server = TRUE,
+    choices = list(
+      `Amphibia` = spp_list %>% filter(CLASS == "Amphibia") %>% pull(SENSFEAT),
+      `Arachnida` = spp_list %>% filter(CLASS == "Arachnida") %>% pull(SENSFEAT),
+      `Aves` = spp_list %>% filter(CLASS == "Aves") %>% pull(SENSFEAT),
+      `Insecta` = spp_list %>% filter(CLASS == "Insecta") %>% pull(SENSFEAT),
+      `Invertebrate` = spp_list %>% filter(CLASS == "Invertebrate") %>% pull(SENSFEAT),
+      `Mammalia` = spp_list %>% filter(CLASS == "Mammalia") %>% pull(SENSFEAT),
+      `Reptilia` = spp_list %>% filter(CLASS == "Reptilia") %>% pull(SENSFEAT),
+      `Plants` = spp_list %>% filter(THEME  == "Plants") %>% pull(SENSFEAT)
+
+    ),
+    selected = NULL,
+    # multiple = FALSE,
+    options = list(
+      placeholder = "Start typing or select from dropdown",
+      onInitialize = I('function() { this.setValue("a"); }')
+    )
+  )
+  })
 
   ### Reset shapefile upload input ----
   values <- reactiveValues(

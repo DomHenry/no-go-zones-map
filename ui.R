@@ -35,7 +35,7 @@ sidebar <- dashboardSidebar(
       useShinyjs(), # Add this to allow shinyjs functions to work in server
       fileInput("user_shape",
                 HTML("Upload polygon (shapefile or KML) <br/> <em> Note that .shp, .shx, .dbf,
-                           and .prj files are all <br/> required for shapefile upload</em>"),
+                           and .prj files are all <br/> required for shapefile upload. KMZ files are not supported. </em>"),
                 multiple = TRUE,
                 accept = c(
                   ".kml",
@@ -45,8 +45,7 @@ sidebar <- dashboardSidebar(
       actionButton("plot_footprint", "Plot shapefile or KML polygon", style = blue_button),
       tags$hr(),
       selectizeInput("sg_key", "Search with 21 digit SG key",
-                     choices = c("Enter SG key" = "", sgdata),
-                     options = list(create = FALSE, selectOnTab = TRUE)
+                     choices = NULL
       ),
       actionButton("search_prop", "Plot property", style = blue_button),
       br(),
@@ -68,23 +67,7 @@ sidebar <- dashboardSidebar(
       tags$hr(),
       selectizeInput(
         inputId = "spp_choice", label = "Species",
-        choices = list(
-          `Amphibia` = spp_list %>% filter(CLASS == "Amphibia") %>% pull(SENSFEAT),
-          `Arachnida` = spp_list %>% filter(CLASS == "Arachnida") %>% pull(SENSFEAT),
-          `Aves` = spp_list %>% filter(CLASS == "Aves") %>% pull(SENSFEAT),
-          `Insecta` = spp_list %>% filter(CLASS == "Insecta") %>% pull(SENSFEAT),
-          `Invertebrate` = spp_list %>% filter(CLASS == "Invertebrate") %>% pull(SENSFEAT),
-          `Mammalia` = spp_list %>% filter(CLASS == "Mammalia") %>% pull(SENSFEAT),
-          `Reptilia` = spp_list %>% filter(CLASS == "Reptilia") %>% pull(SENSFEAT),
-          `Plants` = spp_list %>% filter(THEME  == "Plants") %>% pull(SENSFEAT)
-
-        ),
-        selected = NULL,
-        multiple = FALSE,
-        options = list(
-          placeholder = "Start typing or select from dropdown",
-          onInitialize = I('function() { this.setValue("a"); }')
-        )
+        choices = NULL
       ),
       actionButton("plot_spp", "Plot species", style = blue_button),
 
@@ -121,7 +104,8 @@ body <- dashboardBody(
             title = NULL, width = NULL, solidHeader = TRUE,
             div(
               id = "nogomapdiv",
-              leafletOutput("nogomap", width = "100%", height = 600) %>%
+              # leafletOutput("nogomap", width = "100%", height = 600) %>%
+              leafletOutput("nogomap", height = "85vh") %>%
                 withSpinner(type = 1, size = 1.5)
             ),
             shinyjs::hidden(
