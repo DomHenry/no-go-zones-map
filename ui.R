@@ -105,7 +105,7 @@ body <- dashboardBody(
             div(
               id = "nogomapdiv",
               # leafletOutput("nogomap", width = "100%", height = 600) %>%
-              leafletOutput("nogomap", height = "85vh") %>%
+              leafletOutput("nogomap", height = "90vh") %>%
                 withSpinner(type = 1, size = 1.5)
             ),
             shinyjs::hidden(
