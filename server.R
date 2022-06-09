@@ -77,6 +77,7 @@ server <- function(input, output, session) {
       onInitialize = I('function() { this.setValue("a"); }')
     )
   )
+
   })
 
   ### Reset shapefile upload input ----
@@ -366,6 +367,7 @@ server <- function(input, output, session) {
 
   ### Show download button ----
   observeEvent(input$nogomap_draw_new_feature, { # Note 4
+    shinyjs::show("downloadData")
     shinyjs::show("downloaddiv")
     shinyjs::show("clearcontroldiv")
 
