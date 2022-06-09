@@ -14,7 +14,7 @@ library(leafem)
 library(gt)
 sf_use_s2(FALSE)
 
-# DOCKER VERSION 4.0
+# DOCKER VERSION 4.1
 
 latlongCRS <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
