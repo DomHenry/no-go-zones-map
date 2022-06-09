@@ -67,13 +67,14 @@ global_base_map <- leaflet() %>%
 
 ### Add logo and draw toolbar ----
 global_base_map <- global_base_map %>%
-  leafem::addLogo(img = "ewt_01.png", # Note 5
+  leafem::addLogo(img = "info.png", # Note 5
                   src = "remote",
-                  url = "https://www.ewt.org.za/",
+                  url = "https://www.ewt.org.za/no-go-threatened-species-mapping-tool/",
                   position = "bottomleft",
                   offset.x = 5,
                   offset.y = 40,
-                  width = 70) %>%
+                  width = 40,
+                  height = 40) %>%
   leaflet.extras::addResetMapButton() %>%
   leafem::addMouseCoordinates() %>%
   addDrawToolbar(polylineOptions = FALSE,
