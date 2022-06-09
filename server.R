@@ -121,6 +121,7 @@ server <- function(input, output, session) {
       poly <- poly %>%
         st_transform(crs = latlongCRS)
       st_crs(poly) <- latlongCRS
+      poly <- st_zm(poly, drop = TRUE)
       return(poly)
 
     } else if (all(shp_needed %in% shp_ext)){
